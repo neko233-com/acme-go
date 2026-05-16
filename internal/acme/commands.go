@@ -85,7 +85,44 @@ func Revoke(cfg *config.Config, name string, out io.Writer) error {
 		if err := updateRevocationMetadata(cert); err != nil {
 			return err
 		}
+		if err := runRevokeHooks(cfg, cert, out); err != nil {
+			return err
+		}
 		fmt.Fprintf(out, "%s: revoked\n", cert.Name)
+	}
+	return nil
+}
+
+func Install(cfg *config.Config, name string, out io.Writer) error {
+	targets, err := selectCertificates(cfg.Certificates, name)
+	if err != nil {
+		return err
+	}
+	for _, cert := range targets {
+		if err := validateLocalCertificateMaterial(cert); err != nil {
+			return err
+		}
+		if err := installExisting(cfg, cert, out); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "%s: installed\n", cert.Name)
+	}
+	return nil
+}
+
+func Deploy(cfg *config.Config, name string, out io.Writer) error {
+	targets, err := selectCertificates(cfg.Certificates, name)
+	if err != nil {
+		return err
+	}
+	for _, cert := range targets {
+		if err := validateLocalCertificateMaterial(cert); err != nil {
+			return err
+		}
+		if err := deployExisting(cfg, cert, out); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "%s: deployed\n", cert.Name)
 	}
 	return nil
 }

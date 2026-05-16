@@ -33,5 +33,25 @@
         "ALICLOUD_ACCESS_KEY": "override-key"
       }
     }
+
+  },
+  {
+    "name": "webroot-install-deploy-fields",
+    "env": {},
+    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  provider: cloudflare\ncertificates:\n  - name: example\n    domains:\n      - example.com\n    challenge: webroot\n    webroot_path: public\n    install:\n      key_file: deploy/live/privkey.pem\n      fullchain_file: deploy/live/fullchain.pem\n    deploy:\n      - name: edge\n        type: copy\n        directory: deploy/edge\n    hooks:\n      post_install:\n        - echo install\n      post_deploy:\n        - echo deploy\n",
+    "local_override": "",
+    "expect": {
+      "email": "ops@example.com",
+      "provider": "cloudflare",
+      "first_domain": "example.com",
+      "renew_before_days": 30,
+      "challenge": "webroot",
+      "bundle": true,
+      "webroot_path": "public",
+      "install_fullchain_file": "deploy/live/fullchain.pem",
+      "deploy_count": 1,
+      "post_install_hooks": 1,
+      "post_deploy_hooks": 1
+    }
   }
 ]

@@ -42,6 +42,18 @@
     "want_error_contains": "-name is required"
   },
   {
+    "name": "install-cert-missing-name",
+    "args": ["install-cert"],
+    "require_config": true,
+    "want_error_contains": "-name is required"
+  },
+  {
+    "name": "deploy-missing-name",
+    "args": ["deploy"],
+    "require_config": true,
+    "want_error_contains": "-name is required"
+  },
+  {
     "name": "unknown-command",
     "args": ["unknown"],
     "require_config": false,

@@ -38,16 +38,53 @@ type DNSConfig struct {
 }
 
 type CertificateSpec struct {
-	Name            string   `yaml:"name" json:"name"`
-	Domains         []string `yaml:"domains" json:"domains"`
-	OutputDir       string   `yaml:"output_dir" json:"output_dir"`
-	KeyType         string   `yaml:"key_type" json:"key_type"`
-	Bundle          *bool    `yaml:"bundle" json:"bundle"`
-	MustStaple      bool     `yaml:"must_staple" json:"must_staple"`
-	PreferredChain  string   `yaml:"preferred_chain" json:"preferred_chain"`
-	CSRPath         string   `yaml:"csr_path" json:"csr_path"`
-	RenewBeforeDays int      `yaml:"renew_before_days" json:"renew_before_days"`
-	Challenge       string   `yaml:"challenge" json:"challenge"`
+	Name            string         `yaml:"name" json:"name"`
+	Domains         []string       `yaml:"domains" json:"domains"`
+	OutputDir       string         `yaml:"output_dir" json:"output_dir"`
+	KeyType         string         `yaml:"key_type" json:"key_type"`
+	Bundle          *bool          `yaml:"bundle" json:"bundle"`
+	MustStaple      bool           `yaml:"must_staple" json:"must_staple"`
+	PreferredChain  string         `yaml:"preferred_chain" json:"preferred_chain"`
+	CSRPath         string         `yaml:"csr_path" json:"csr_path"`
+	WebrootPath     string         `yaml:"webroot_path" json:"webroot_path"`
+	HTTPBind        string         `yaml:"http_bind" json:"http_bind"`
+	HTTPPort        string         `yaml:"http_port" json:"http_port"`
+	TLSALPNBind     string         `yaml:"tlsalpn_bind" json:"tlsalpn_bind"`
+	TLSALPNPort     string         `yaml:"tlsalpn_port" json:"tlsalpn_port"`
+	RenewBeforeDays int            `yaml:"renew_before_days" json:"renew_before_days"`
+	Challenge       string         `yaml:"challenge" json:"challenge"`
+	Install         InstallConfig  `yaml:"install" json:"install"`
+	Deploy          []DeployTarget `yaml:"deploy" json:"deploy"`
+	Hooks           HookConfig     `yaml:"hooks" json:"hooks"`
+}
+
+type InstallConfig struct {
+	CertFile      string `yaml:"cert_file" json:"cert_file"`
+	KeyFile       string `yaml:"key_file" json:"key_file"`
+	FullChainFile string `yaml:"fullchain_file" json:"fullchain_file"`
+	ChainFile     string `yaml:"chain_file" json:"chain_file"`
+}
+
+type DeployTarget struct {
+	Name          string            `yaml:"name" json:"name"`
+	Type          string            `yaml:"type" json:"type"`
+	Directory     string            `yaml:"directory" json:"directory"`
+	Command       string            `yaml:"command" json:"command"`
+	CertFile      string            `yaml:"cert_file" json:"cert_file"`
+	KeyFile       string            `yaml:"key_file" json:"key_file"`
+	FullChainFile string            `yaml:"fullchain_file" json:"fullchain_file"`
+	ChainFile     string            `yaml:"chain_file" json:"chain_file"`
+	Env           map[string]string `yaml:"env" json:"env"`
+}
+
+type HookConfig struct {
+	PreIssue    []string `yaml:"pre_issue" json:"pre_issue"`
+	PostIssue   []string `yaml:"post_issue" json:"post_issue"`
+	PreRenew    []string `yaml:"pre_renew" json:"pre_renew"`
+	PostRenew   []string `yaml:"post_renew" json:"post_renew"`
+	PostRevoke  []string `yaml:"post_revoke" json:"post_revoke"`
+	PostInstall []string `yaml:"post_install" json:"post_install"`
+	PostDeploy  []string `yaml:"post_deploy" json:"post_deploy"`
 }
 
 func Load(path string) (*Config, error) {
@@ -166,11 +203,31 @@ func (c *Config) merge(override Config) {
 		if incoming.CSRPath != "" {
 			merged.CSRPath = incoming.CSRPath
 		}
+		if incoming.WebrootPath != "" {
+			merged.WebrootPath = incoming.WebrootPath
+		}
+		if incoming.HTTPBind != "" {
+			merged.HTTPBind = incoming.HTTPBind
+		}
+		if incoming.HTTPPort != "" {
+			merged.HTTPPort = incoming.HTTPPort
+		}
+		if incoming.TLSALPNBind != "" {
+			merged.TLSALPNBind = incoming.TLSALPNBind
+		}
+		if incoming.TLSALPNPort != "" {
+			merged.TLSALPNPort = incoming.TLSALPNPort
+		}
 		if incoming.RenewBeforeDays != 0 {
 			merged.RenewBeforeDays = incoming.RenewBeforeDays
 		}
 		if incoming.Challenge != "" {
 			merged.Challenge = incoming.Challenge
+		}
+		mergeInstallConfig(&merged.Install, incoming.Install)
+		mergeHooks(&merged.Hooks, incoming.Hooks)
+		if len(incoming.Deploy) > 0 {
+			merged.Deploy = append([]DeployTarget(nil), incoming.Deploy...)
 		}
 		c.Certificates[index] = merged
 	}
@@ -206,6 +263,18 @@ func (c *Config) applyDefaults(configPath string) error {
 			cert.Challenge = "dns-01"
 		}
 		cert.Challenge = strings.ToLower(cert.Challenge)
+		if cert.HTTPBind == "" {
+			cert.HTTPBind = "0.0.0.0"
+		}
+		if cert.HTTPPort == "" {
+			cert.HTTPPort = "80"
+		}
+		if cert.TLSALPNBind == "" {
+			cert.TLSALPNBind = "0.0.0.0"
+		}
+		if cert.TLSALPNPort == "" {
+			cert.TLSALPNPort = "443"
+		}
 		if cert.Bundle == nil {
 			defaultBundle := true
 			cert.Bundle = &defaultBundle
@@ -239,13 +308,98 @@ func (c *Config) Validate() error {
 		if len(cert.Domains) == 0 {
 			return fmt.Errorf("certificate %q must declare at least one domain", cert.Name)
 		}
-		if cert.Challenge != "dns-01" {
+		switch cert.Challenge {
+		case "dns-01", "http-01", "webroot", "standalone", "tls-alpn-01":
+		default:
 			return fmt.Errorf("certificate %q uses unsupported challenge %q", cert.Name, cert.Challenge)
+		}
+		if cert.Challenge == "webroot" && cert.WebrootPath == "" {
+			return fmt.Errorf("certificate %q requires webroot_path for webroot challenge", cert.Name)
+		}
+		if cert.Challenge == "tls-alpn-01" && len(cert.Domains) > 1 {
+			for _, domain := range cert.Domains {
+				if strings.HasPrefix(domain, "*.") {
+					return fmt.Errorf("certificate %q cannot use wildcard domains with tls-alpn-01", cert.Name)
+				}
+			}
+		}
+		if err := validateInstallConfig(cert.Name, cert.Install); err != nil {
+			return err
+		}
+		if err := validateDeployTargets(cert.Name, cert.Deploy); err != nil {
+			return err
 		}
 		switch cert.KeyType {
 		case "ec256", "ec384", "rsa2048", "rsa4096", "rsa8192":
 		default:
 			return fmt.Errorf("certificate %q uses unsupported key_type %q", cert.Name, cert.KeyType)
+		}
+	}
+	return nil
+}
+
+func mergeInstallConfig(base *InstallConfig, incoming InstallConfig) {
+	if incoming.CertFile != "" {
+		base.CertFile = incoming.CertFile
+	}
+	if incoming.KeyFile != "" {
+		base.KeyFile = incoming.KeyFile
+	}
+	if incoming.FullChainFile != "" {
+		base.FullChainFile = incoming.FullChainFile
+	}
+	if incoming.ChainFile != "" {
+		base.ChainFile = incoming.ChainFile
+	}
+}
+
+func mergeHooks(base *HookConfig, incoming HookConfig) {
+	if len(incoming.PreIssue) > 0 {
+		base.PreIssue = append([]string(nil), incoming.PreIssue...)
+	}
+	if len(incoming.PostIssue) > 0 {
+		base.PostIssue = append([]string(nil), incoming.PostIssue...)
+	}
+	if len(incoming.PreRenew) > 0 {
+		base.PreRenew = append([]string(nil), incoming.PreRenew...)
+	}
+	if len(incoming.PostRenew) > 0 {
+		base.PostRenew = append([]string(nil), incoming.PostRenew...)
+	}
+	if len(incoming.PostRevoke) > 0 {
+		base.PostRevoke = append([]string(nil), incoming.PostRevoke...)
+	}
+	if len(incoming.PostInstall) > 0 {
+		base.PostInstall = append([]string(nil), incoming.PostInstall...)
+	}
+	if len(incoming.PostDeploy) > 0 {
+		base.PostDeploy = append([]string(nil), incoming.PostDeploy...)
+	}
+}
+
+func validateInstallConfig(name string, install InstallConfig) error {
+	if install.CertFile == "" && install.KeyFile == "" && install.FullChainFile == "" && install.ChainFile == "" {
+		return nil
+	}
+	if install.KeyFile == "" || install.FullChainFile == "" {
+		return fmt.Errorf("certificate %q install config requires at least key_file and fullchain_file", name)
+	}
+	return nil
+}
+
+func validateDeployTargets(name string, targets []DeployTarget) error {
+	for _, target := range targets {
+		switch strings.ToLower(target.Type) {
+		case "", "copy":
+			if target.Directory == "" && target.CertFile == "" && target.KeyFile == "" && target.FullChainFile == "" && target.ChainFile == "" {
+				return fmt.Errorf("certificate %q deploy target %q requires directory or explicit output files", name, target.Name)
+			}
+		case "command":
+			if strings.TrimSpace(target.Command) == "" {
+				return fmt.Errorf("certificate %q deploy target %q requires command", name, target.Name)
+			}
+		default:
+			return fmt.Errorf("certificate %q deploy target %q uses unsupported type %q", name, target.Name, target.Type)
 		}
 	}
 	return nil

@@ -18,7 +18,10 @@ import (
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge/dns01"
+	"github.com/go-acme/lego/v4/challenge/http01"
+	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 	lego "github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/providers/http/webroot"
 	"github.com/go-acme/lego/v4/registration"
 )
 
@@ -99,12 +102,18 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 		if err := ensureRegistration(client, user, cfg.Account.AcceptTOS); err != nil {
 			return result, err
 		}
+		if err := runPreHooks(cert, options.Mode, newDeployContext(cfg, cert), options.Out); err != nil {
+			return result, err
+		}
 
 		resource, err := executeCertificateOperation(client, cert, options.Mode)
 		if err != nil {
 			return result, fmt.Errorf("%s %s: %w", options.Mode, cert.Name, err)
 		}
 		if err := writeCertificate(cert, cfg, resource); err != nil {
+			return result, err
+		}
+		if err := runSuccessActions(cfg, cert, options.Mode, options.Out); err != nil {
 			return result, err
 		}
 		fmt.Fprintf(options.Out, "%s: wrote certificate to %s\n", cert.Name, cert.OutputDir)
@@ -177,18 +186,46 @@ func buildClient(user *User, cfg *config.Config, cert config.CertificateSpec) (*
 		challengeOptions = append(challengeOptions, dns01.AddRecursiveNameservers(cfg.DNS.RecursiveNameservers))
 	}
 
-	strategy, err := dnsprovider.Resolve(cfg.DNS.Provider)
-	if err != nil {
+	if err := configureChallenge(client, cfg, cert, challengeOptions); err != nil {
 		return nil, err
 	}
-	provider, err := strategy.NewProvider(cfg.DNS)
-	if err != nil {
-		return nil, fmt.Errorf("build DNS provider %q: %w", cfg.DNS.Provider, err)
-	}
-	if err := client.Challenge.SetDNS01Provider(provider, challengeOptions...); err != nil {
-		return nil, fmt.Errorf("attach DNS provider: %w", err)
-	}
 	return client, nil
+}
+
+func configureChallenge(client *lego.Client, cfg *config.Config, cert config.CertificateSpec, dnsOptions []dns01.ChallengeOption) error {
+	switch cert.Challenge {
+	case "dns-01":
+		strategy, err := dnsprovider.Resolve(cfg.DNS.Provider)
+		if err != nil {
+			return err
+		}
+		provider, err := strategy.NewProvider(cfg.DNS)
+		if err != nil {
+			return fmt.Errorf("build DNS provider %q: %w", cfg.DNS.Provider, err)
+		}
+		if err := client.Challenge.SetDNS01Provider(provider, dnsOptions...); err != nil {
+			return fmt.Errorf("attach DNS provider: %w", err)
+		}
+	case "webroot":
+		provider, err := webroot.NewHTTPProvider(cert.WebrootPath)
+		if err != nil {
+			return fmt.Errorf("build webroot provider: %w", err)
+		}
+		if err := client.Challenge.SetHTTP01Provider(provider); err != nil {
+			return fmt.Errorf("attach webroot provider: %w", err)
+		}
+	case "http-01", "standalone":
+		if err := client.Challenge.SetHTTP01Provider(http01.NewProviderServer(cert.HTTPBind, cert.HTTPPort)); err != nil {
+			return fmt.Errorf("attach standalone http provider: %w", err)
+		}
+	case "tls-alpn-01":
+		if err := client.Challenge.SetTLSALPN01Provider(tlsalpn01.NewProviderServer(cert.TLSALPNBind, cert.TLSALPNPort)); err != nil {
+			return fmt.Errorf("attach tls-alpn provider: %w", err)
+		}
+	default:
+		return fmt.Errorf("unsupported challenge %q", cert.Challenge)
+	}
+	return nil
 }
 
 func ensureRegistration(client *lego.Client, user *User, acceptTOS bool) error {

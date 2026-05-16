@@ -38,6 +38,10 @@ func run(args []string) error {
 		return runIssue(args[1:], true)
 	case "revoke":
 		return runRevoke(args[1:])
+	case "install-cert":
+		return runInstallCert(args[1:])
+	case "deploy":
+		return runDeploy(args[1:])
 	case "providers":
 		return acme.Providers(os.Stdout)
 	case "version":
@@ -148,6 +152,40 @@ func runRevoke(args []string) error {
 	return acme.Revoke(cfg, *name, os.Stdout)
 }
 
+func runInstallCert(args []string) error {
+	fs := flag.NewFlagSet("install-cert", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	name := fs.String("name", "", "certificate entry name")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *name == "" {
+		return errors.New("-name is required")
+	}
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+	return acme.Install(cfg, *name, os.Stdout)
+}
+
+func runDeploy(args []string) error {
+	fs := flag.NewFlagSet("deploy", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	name := fs.String("name", "", "certificate entry name")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *name == "" {
+		return errors.New("-name is required")
+	}
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+	return acme.Deploy(cfg, *name, os.Stdout)
+}
+
 func printUsage() {
 	fmt.Print(`acme-go is a config-driven ACME client.
 
@@ -158,6 +196,8 @@ Usage:
   acme-go issue  -config config.yaml [-name example] [-force]
   acme-go renew  -config config.yaml [-name example] [-force]
   acme-go revoke -config config.yaml -name example
+	acme-go install-cert -config config.yaml -name example
+	acme-go deploy -config config.yaml -name example
   acme-go providers
   acme-go version
 `)

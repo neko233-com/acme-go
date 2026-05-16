@@ -24,4 +24,27 @@ certificates:
     csr_path: ""
     renew_before_days: 30
     challenge: dns-01
+    webroot_path: ""
+    http_bind: 0.0.0.0
+    http_port: "80"
+    tlsalpn_bind: 0.0.0.0
+    tlsalpn_port: "443"
+    install:
+      key_file: ""
+      fullchain_file: ""
+    deploy:
+      - name: local-copy
+        type: copy
+        directory: ""
+      - name: reload-service
+        type: command
+        command: ""
+    hooks:
+      pre_issue: []
+      post_issue: []
+      pre_renew: []
+      post_renew: []
+      post_revoke: []
+      post_install: []
+      post_deploy: []
     bundle: true
