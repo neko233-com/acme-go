@@ -1,0 +1,10 @@
+.acme/
+certs/
+dist/
+bin/
+coverage.out
+config.yaml
+.local.json
+.env
+.DS_Store
+Thumbs.db

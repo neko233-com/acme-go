@@ -1,0 +1,12 @@
+{
+  "account": {
+    "email": "ops@example.com"
+  },
+  "dns": {
+    "provider": "alidns",
+    "env": {
+      "ALICLOUD_ACCESS_KEY": "your-access-key",
+      "ALICLOUD_SECRET_KEY": "your-secret-key"
+    }
+  }
+}

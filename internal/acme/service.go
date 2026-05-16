@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v4/challenge/dns01"
 	lego "github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/providers/dns"
 	"github.com/go-acme/lego/v4/registration"
@@ -72,7 +73,7 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 		return Result{}, err
 	}
 
-	restoreEnv, err := applyEnv(cfg.DNS.Env)
+	restoreEnv, err := applyEnv(cfg.DNS)
 	if err != nil {
 		return Result{}, err
 	}
@@ -102,7 +103,7 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 
 		request := certificate.ObtainRequest{
 			Domains: cert.Domains,
-			Bundle:  cert.Bundle,
+			Bundle:  bundleEnabled(cert),
 		}
 		resource, err := client.Certificate.Obtain(request)
 		if err != nil {
@@ -132,10 +133,17 @@ func selectCertificates(certificates []config.CertificateSpec, name string) ([]c
 	return nil, fmt.Errorf("certificate %q not found", name)
 }
 
-func applyEnv(values map[string]string) (func(), error) {
+func applyEnv(dnsConfig config.DNSConfig) (func(), error) {
 	type restore struct {
 		value   string
 		present bool
+	}
+	values := map[string]string{}
+	for key, value := range dnsConfig.Env {
+		values[key] = value
+	}
+	if dnsConfig.DisableCNAMESupport {
+		values["LEGO_DISABLE_CNAME_SUPPORT"] = "true"
 	}
 	originals := map[string]restore{}
 	for key, value := range values {
@@ -166,6 +174,14 @@ func buildClient(user *User, cfg *config.Config, cert config.CertificateSpec) (*
 		return nil, fmt.Errorf("create ACME client: %w", err)
 	}
 
+	challengeOptions := []dns01.ChallengeOption{}
+	if cfg.DNS.DisableCompletePropagation {
+		challengeOptions = append(challengeOptions, dns01.DisableCompletePropagationRequirement())
+	}
+	if len(cfg.DNS.RecursiveNameservers) > 0 {
+		challengeOptions = append(challengeOptions, dns01.AddRecursiveNameservers(cfg.DNS.RecursiveNameservers))
+	}
+
 	provider, err := dns.NewDNSChallengeProviderByName(strings.ToUpper(cfg.DNS.Provider))
 	if err != nil {
 		provider, err = dns.NewDNSChallengeProviderByName(cfg.DNS.Provider)
@@ -173,7 +189,7 @@ func buildClient(user *User, cfg *config.Config, cert config.CertificateSpec) (*
 			return nil, fmt.Errorf("build DNS provider %q: %w", cfg.DNS.Provider, err)
 		}
 	}
-	if err := client.Challenge.SetDNS01Provider(provider); err != nil {
+	if err := client.Challenge.SetDNS01Provider(provider, challengeOptions...); err != nil {
 		return nil, fmt.Errorf("attach DNS provider: %w", err)
 	}
 	return client, nil
@@ -212,6 +228,13 @@ func mapKeyType(value string) certcrypto.KeyType {
 		return certcrypto.EC256
 	}
 }
+
+func bundleEnabled(cert config.CertificateSpec) bool {
+	if cert.Bundle == nil {
+		return true
+	}
+	return *cert.Bundle
+	}
 
 func certificateNeedsRenew(cert config.CertificateSpec) (bool, time.Time, error) {
 	expiry, err := readCertificateExpiry(filepath.Join(cert.OutputDir, "fullchain.pem"))

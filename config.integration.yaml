@@ -1,0 +1,26 @@
+ca:
+  directory_url: https://acme-staging-v02.api.letsencrypt.org/directory
+
+account:
+  email: placeholder@example.com
+  accept_tos: true
+
+dns:
+  provider: alidns
+  disable_cname_support: true
+  disable_complete_propagation: true
+  recursive_nameservers:
+    - 223.5.5.5:53
+    - 223.6.6.6:53
+    - 8.8.8.8:53
+
+certificates:
+  - name: neko233-staging
+    domains:
+      - acme-go.neko233.com
+      - '*.acme-go.neko233.com'
+    output_dir: certs/acme-go.neko233.com
+    key_type: ec256
+    renew_before_days: 30
+    challenge: dns-01
+    bundle: true

@@ -1,0 +1,23 @@
+ca:
+  directory_url: https://acme-v02.api.letsencrypt.org/directory
+
+account:
+  email: ops@example.com
+  key_path: .acme/account.pem
+  accept_tos: true
+
+dns:
+  provider: cloudflare
+  env:
+    CLOUDFLARE_DNS_API_TOKEN: ${CLOUDFLARE_DNS_API_TOKEN}
+
+certificates:
+  - name: example-prod
+    domains:
+      - example.com
+      - '*.example.com'
+    output_dir: certs/example-prod
+    key_type: ec256
+    renew_before_days: 30
+    challenge: dns-01
+    bundle: true

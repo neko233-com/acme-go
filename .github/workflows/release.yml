@@ -1,0 +1,78 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+          cache: true
+
+      - name: Build artifact
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          suffix=""
+          if [ "$GOOS" = "windows" ]; then
+            suffix=".exe"
+          fi
+          binary="acme-go${suffix}"
+          outdir="dist/acme-go_${GOOS}_${GOARCH}"
+          mkdir -p "$outdir"
+          go build -trimpath -ldflags "-s -w" -o "$outdir/$binary" .
+          if [ "$GOOS" = "windows" ]; then
+            (cd dist && zip -r "acme-go_${GOOS}_${GOARCH}.zip" "acme-go_${GOOS}_${GOARCH}")
+          else
+            tar -C dist -czf "dist/acme-go_${GOOS}_${GOARCH}.tar.gz" "acme-go_${GOOS}_${GOARCH}"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: acme-go_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: |
+            dist/acme-go_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
+            dist/acme-go_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+      - name: Publish release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/acme-go_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
+            dist/acme-go_${{ matrix.goos }}_${{ matrix.goarch }}.zip
