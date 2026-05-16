@@ -1,19 +1,13 @@
 @echo off
 setlocal
 
-echo [1/4] Running unit tests...
-go test ./...
+set COMMIT_MESSAGE=auto up
+if not "%~1"=="" set COMMIT_MESSAGE=%~1
+
+call test-auto.cmd
 if errorlevel 1 goto fail
 
-if exist .local.json (
-	echo [2/4] Running integration tests...
-	go test -tags=integration -timeout 20m ./...
-	if errorlevel 1 goto fail
-) else (
-	echo [2/4] Skipping integration tests because .local.json was not found.
-)
-
-echo [3/4] Staging git changes...
+echo [1/3] Staging git changes...
 git add .
 git diff --cached --quiet
 if not errorlevel 1 (
@@ -21,14 +15,14 @@ if not errorlevel 1 (
 	goto end
 )
 
-echo [4/4] Commit and push...
-git commit -m "auto up"
+echo [2/3] Commit and push...
+git commit -m "%COMMIT_MESSAGE%"
 if errorlevel 1 goto fail
 
 git push
 if errorlevel 1 goto fail
 
-echo Done.
+echo [3/3] Done.
 goto end
 
 :fail

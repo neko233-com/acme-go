@@ -3,7 +3,6 @@ package acme
 import (
 	"bytes"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -14,12 +13,12 @@ import (
 	"time"
 
 	"acme-go/internal/config"
+	"acme-go/internal/dnsprovider"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge/dns01"
 	lego "github.com/go-acme/lego/v4/lego"
-	"github.com/go-acme/lego/v4/providers/dns"
 	"github.com/go-acme/lego/v4/registration"
 )
 
@@ -101,15 +100,11 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 			return result, err
 		}
 
-		request := certificate.ObtainRequest{
-			Domains: cert.Domains,
-			Bundle:  bundleEnabled(cert),
-		}
-		resource, err := client.Certificate.Obtain(request)
+		resource, err := executeCertificateOperation(client, cert, options.Mode)
 		if err != nil {
-			return result, fmt.Errorf("issue %s: %w", cert.Name, err)
+			return result, fmt.Errorf("%s %s: %w", options.Mode, cert.Name, err)
 		}
-		if err := writeCertificate(cert, cfg.CA.DirectoryURL, resource); err != nil {
+		if err := writeCertificate(cert, cfg, resource); err != nil {
 			return result, err
 		}
 		fmt.Fprintf(options.Out, "%s: wrote certificate to %s\n", cert.Name, cert.OutputDir)
@@ -182,12 +177,13 @@ func buildClient(user *User, cfg *config.Config, cert config.CertificateSpec) (*
 		challengeOptions = append(challengeOptions, dns01.AddRecursiveNameservers(cfg.DNS.RecursiveNameservers))
 	}
 
-	provider, err := dns.NewDNSChallengeProviderByName(strings.ToUpper(cfg.DNS.Provider))
+	strategy, err := dnsprovider.Resolve(cfg.DNS.Provider)
 	if err != nil {
-		provider, err = dns.NewDNSChallengeProviderByName(cfg.DNS.Provider)
-		if err != nil {
-			return nil, fmt.Errorf("build DNS provider %q: %w", cfg.DNS.Provider, err)
-		}
+		return nil, err
+	}
+	provider, err := strategy.NewProvider(cfg.DNS)
+	if err != nil {
+		return nil, fmt.Errorf("build DNS provider %q: %w", cfg.DNS.Provider, err)
 	}
 	if err := client.Challenge.SetDNS01Provider(provider, challengeOptions...); err != nil {
 		return nil, fmt.Errorf("attach DNS provider: %w", err)
@@ -234,7 +230,54 @@ func bundleEnabled(cert config.CertificateSpec) bool {
 		return true
 	}
 	return *cert.Bundle
+}
+
+func executeCertificateOperation(client *lego.Client, cert config.CertificateSpec, mode Mode) (*certificate.Resource, error) {
+	if cert.CSRPath != "" {
+		request, err := buildCSRRequest(cert)
+		if err != nil {
+			return nil, err
+		}
+		return client.Certificate.ObtainForCSR(request)
 	}
+
+	if mode == ModeRenew {
+		resource, err := loadCertificateResource(cert)
+		if err == nil {
+			return client.Certificate.RenewWithOptions(resource, &certificate.RenewOptions{
+				Bundle:         bundleEnabled(cert),
+				PreferredChain: cert.PreferredChain,
+			})
+		}
+	}
+
+	return client.Certificate.Obtain(certificate.ObtainRequest{
+		Domains:        cert.Domains,
+		Bundle:         bundleEnabled(cert),
+		MustStaple:     cert.MustStaple,
+		PreferredChain: cert.PreferredChain,
+	})
+}
+
+func buildCSRRequest(cert config.CertificateSpec) (certificate.ObtainForCSRRequest, error) {
+	data, err := os.ReadFile(cert.CSRPath)
+	if err != nil {
+		return certificate.ObtainForCSRRequest{}, fmt.Errorf("read csr: %w", err)
+	}
+	block, _ := pem.Decode(data)
+	if block == nil || !strings.Contains(block.Type, "CERTIFICATE REQUEST") {
+		return certificate.ObtainForCSRRequest{}, fmt.Errorf("csr file %s is not a PEM CSR", cert.CSRPath)
+	}
+	csr, err := x509.ParseCertificateRequest(block.Bytes)
+	if err != nil {
+		return certificate.ObtainForCSRRequest{}, fmt.Errorf("parse csr: %w", err)
+	}
+	return certificate.ObtainForCSRRequest{
+		CSR:            csr,
+		Bundle:         bundleEnabled(cert),
+		PreferredChain: cert.PreferredChain,
+	}, nil
+}
 
 func certificateNeedsRenew(cert config.CertificateSpec) (bool, time.Time, error) {
 	expiry, err := readCertificateExpiry(filepath.Join(cert.OutputDir, "fullchain.pem"))
@@ -261,7 +304,7 @@ func readCertificateExpiry(path string) (time.Time, error) {
 	return cert.NotAfter, nil
 }
 
-func writeCertificate(cert config.CertificateSpec, directoryURL string, resource *certificate.Resource) error {
+func writeCertificate(cert config.CertificateSpec, cfg *config.Config, resource *certificate.Resource) error {
 	if err := os.MkdirAll(cert.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("create certificate dir: %w", err)
 	}
@@ -296,28 +339,7 @@ func writeCertificate(cert config.CertificateSpec, directoryURL string, resource
 		return err
 	}
 
-	metadata, err := json.MarshalIndent(struct {
-		Name        string    `json:"name"`
-		Domains     []string  `json:"domains"`
-		Directory   string    `json:"directory_url"`
-		IssuedAt    time.Time `json:"issued_at"`
-		NotAfter    time.Time `json:"not_after"`
-		RenewBefore int       `json:"renew_before_days"`
-	}{
-		Name:        cert.Name,
-		Domains:     cert.Domains,
-		Directory:   directoryURL,
-		IssuedAt:    time.Now().UTC(),
-		NotAfter:    expiry.UTC(),
-		RenewBefore: cert.RenewBeforeDays,
-	}, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal metadata: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(cert.OutputDir, "metadata.json"), metadata, 0o600); err != nil {
-		return fmt.Errorf("write metadata: %w", err)
-	}
-	return nil
+	return writeMetadata(cert, cfg, resource, expiry)
 }
 
 func splitCertificate(data []byte) ([]byte, []byte, error) {
@@ -347,4 +369,28 @@ func splitCertificate(data []byte) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("ACME response did not contain a leaf certificate")
 	}
 	return leaf.Bytes(), chain.Bytes(), nil
+}
+
+func loadCertificateResource(cert config.CertificateSpec) (certificate.Resource, error) {
+	certificatePEM, err := os.ReadFile(filepath.Join(cert.OutputDir, "fullchain.pem"))
+	if err != nil {
+		return certificate.Resource{}, err
+	}
+	privateKey, err := os.ReadFile(filepath.Join(cert.OutputDir, "privkey.pem"))
+	if err != nil {
+		return certificate.Resource{}, err
+	}
+	issuerPEM, _ := os.ReadFile(filepath.Join(cert.OutputDir, "issuer.pem"))
+	metadata, _ := readMetadata(cert)
+	resource := certificate.Resource{
+		Domain:            cert.Domains[0],
+		PrivateKey:        privateKey,
+		Certificate:       certificatePEM,
+		IssuerCertificate: issuerPEM,
+	}
+	if metadata != nil {
+		resource.CertURL = metadata.CertURL
+		resource.CertStableURL = metadata.CertStableURL
+	}
+	return resource, nil
 }

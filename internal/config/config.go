@@ -30,11 +30,11 @@ type AccountConfig struct {
 }
 
 type DNSConfig struct {
-	Provider                   string   `yaml:"provider" json:"provider"`
+	Provider                   string            `yaml:"provider" json:"provider"`
 	Env                        map[string]string `yaml:"env" json:"env"`
-	DisableCNAMESupport        bool     `yaml:"disable_cname_support" json:"disable_cname_support"`
-	DisableCompletePropagation bool     `yaml:"disable_complete_propagation" json:"disable_complete_propagation"`
-	RecursiveNameservers       []string `yaml:"recursive_nameservers" json:"recursive_nameservers"`
+	DisableCNAMESupport        bool              `yaml:"disable_cname_support" json:"disable_cname_support"`
+	DisableCompletePropagation bool              `yaml:"disable_complete_propagation" json:"disable_complete_propagation"`
+	RecursiveNameservers       []string          `yaml:"recursive_nameservers" json:"recursive_nameservers"`
 }
 
 type CertificateSpec struct {
@@ -43,6 +43,9 @@ type CertificateSpec struct {
 	OutputDir       string   `yaml:"output_dir" json:"output_dir"`
 	KeyType         string   `yaml:"key_type" json:"key_type"`
 	Bundle          *bool    `yaml:"bundle" json:"bundle"`
+	MustStaple      bool     `yaml:"must_staple" json:"must_staple"`
+	PreferredChain  string   `yaml:"preferred_chain" json:"preferred_chain"`
+	CSRPath         string   `yaml:"csr_path" json:"csr_path"`
 	RenewBeforeDays int      `yaml:"renew_before_days" json:"renew_before_days"`
 	Challenge       string   `yaml:"challenge" json:"challenge"`
 }
@@ -153,6 +156,15 @@ func (c *Config) merge(override Config) {
 		}
 		if incoming.Bundle != nil {
 			merged.Bundle = incoming.Bundle
+		}
+		if incoming.MustStaple {
+			merged.MustStaple = true
+		}
+		if incoming.PreferredChain != "" {
+			merged.PreferredChain = incoming.PreferredChain
+		}
+		if incoming.CSRPath != "" {
+			merged.CSRPath = incoming.CSRPath
 		}
 		if incoming.RenewBeforeDays != 0 {
 			merged.RenewBeforeDays = incoming.RenewBeforeDays

@@ -60,4 +60,14 @@ func TestAliDNSStagingIssueFlow(t *testing.T) {
 	if renewResult.Skipped != 1 {
 		t.Fatalf("expected renew to skip a fresh certificate, got %+v\n%s", renewResult, renewOutput.String())
 	}
+
+	var infoOutput bytes.Buffer
+	if err := acme.Info(cfg, "neko233-staging", &infoOutput); err != nil {
+		t.Fatalf("info certificate: %v", err)
+	}
+
+	var listOutput bytes.Buffer
+	if err := acme.List(cfg, &listOutput); err != nil {
+		t.Fatalf("list certificates: %v", err)
+	}
 }

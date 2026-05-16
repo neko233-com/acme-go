@@ -1,30 +1,50 @@
 # acme-go
 
-`acme-go` is a config-driven ACME client inspired by `acme.sh`, implemented in Go and aimed at cross-platform automation.
+`acme-go` is a config-driven ACME client inspired by `acme.sh`, implemented in Go and structured around vendor strategies.
 
-## Scope
+## Current Direction
 
-- Go 1.26 module and CI baseline.
-- Config-driven certificate definitions.
-- DNS-01 issuance flow backed by `go-acme/lego`.
-- Idempotent `plan`, `issue`, and `renew` commands.
-- Cross-platform release matrix for `linux`, `windows`, and `darwin` on `amd64` and `arm64`.
+- Strategy pattern for DNS vendors, with one vendor per subdirectory under `internal/dnsprovider/`.
+- First-class vendor strategies for AliCloud, Cloudflare, Volcengine, Tencent Cloud, Azure DNS, Google Cloud DNS, and AWS Route53.
+- Config-driven ACME flows with `.local.json` override support.
+- DNS-01 issuance and renewal, CSR-based issuance, certificate listing, metadata inspection, and revoke support.
+- Cross-platform build and CI targets for `linux`, `windows`, and `darwin` on `amd64` and `arm64`.
+
+## Vendor Strategy Layout
+
+```text
+internal/dnsprovider/
+  alicloud/
+  aws/
+  azure/
+  cloudflare/
+  gcloud/
+  tencentcloud/
+  volcengine/
+```
+
+Each strategy owns vendor-specific provider construction. The Volcengine strategy includes a local DNS challenge provider built on the Volcengine Go SDK.
 
 ## Quick Start
 
 1. Copy `config.example.yaml` to `config.yaml`.
 2. Put private overrides and provider credentials into `.local.json`.
-3. Run `go run . plan -config config.yaml`.
-4. Run `go run . issue -config config.yaml`.
+3. Run `go run . providers` to confirm supported vendors.
+4. Run `go run . plan -config config.yaml`.
+5. Run `go run . issue -config config.yaml`.
 
-`config.yaml` stays commit-friendly, while `.local.json` has higher priority and is ignored by Git. The tool stores account material in `.acme/` and writes certificates under `certs/<name>/` by default.
+`config.yaml` stays commit-friendly, while `.local.json` has higher priority and is ignored by Git.
 
 ## Commands
 
 ```bash
+go run . providers
 go run . plan -config config.yaml
+go run . list -config config.yaml
+go run . info -config config.yaml -name example-prod
 go run . issue -config config.yaml [-name example-prod] [-force]
 go run . renew -config config.yaml [-name example-prod] [-force]
+go run . revoke -config config.yaml -name example-prod
 go run . version
 ```
 
@@ -40,9 +60,13 @@ account:
   accept_tos: true
 
 dns:
-  provider: cloudflare
+  provider: alicloud
   env:
-    CLOUDFLARE_DNS_API_TOKEN: ${CLOUDFLARE_DNS_API_TOKEN}
+    ALICLOUD_ACCESS_KEY: ${ALICLOUD_ACCESS_KEY}
+    ALICLOUD_SECRET_KEY: ${ALICLOUD_SECRET_KEY}
+  disable_cname_support: false
+  disable_complete_propagation: false
+  recursive_nameservers: []
 
 certificates:
   - name: example-prod
@@ -51,20 +75,20 @@ certificates:
       - '*.example.com'
     output_dir: certs/example-prod
     key_type: ec256
+    preferred_chain: ""
+    must_staple: false
+    csr_path: ""
     renew_before_days: 30
     challenge: dns-01
     bundle: true
 ```
 
-Example local override:
+Example local override for AliCloud:
 
 ```json
 {
-  "account": {
-    "email": "ops@example.com"
-  },
   "dns": {
-    "provider": "alidns",
+    "provider": "alicloud",
     "env": {
       "ALICLOUD_ACCESS_KEY": "your-access-key",
       "ALICLOUD_SECRET_KEY": "your-secret-key"
@@ -73,16 +97,50 @@ Example local override:
 }
 ```
 
+Example local override for Volcengine:
+
+```json
+{
+  "dns": {
+    "provider": "volcengine",
+    "env": {
+      "VOLC_ACCESSKEY": "your-access-key",
+      "VOLC_SECRETKEY": "your-secret-key",
+      "VOLC_REGION": "cn-beijing"
+    }
+  }
+}
+```
+
+## Supported Vendors
+
+- `alicloud`: aliases `aliyun`, `alidns`
+- `cloudflare`
+- `volcengine`
+- `tencentcloud`: aliases `tencent`, `dnspod`
+- `azure`
+- `gcloud`: aliases `gcp`, `google cloud`
+- `aws`: aliases `route53`
+
 ## Automated Testing
 
-- `go test ./...` runs fast unit tests.
-- `go test -tags=integration -timeout 20m ./...` runs the live ACME staging test when `.local.json` is present.
-- `git-auto-up.cmd` runs unit tests first, then integration tests, and only pushes when all tests pass.
+- `go test ./...` covers config, provider registry, and core certificate helpers.
+- `go test -tags=integration -timeout 20m ./...` runs the live ACME staging flow when `.local.json` is present.
+- `test-auto.cmd` and `test-auto.sh` are the cross-platform test entrypoints used by local automation and CI.
+- `git-auto-up.cmd` and `git-auto-up.sh` run the scripted test chain first, then push only when all checks pass.
+
+## Spec-Driven
+
+- Machine-readable specs live under `specs/`.
+- `specs/provider_aliases.json` drives vendor alias resolution tests.
+- `specs/config_cases.json` drives config loading and `.local.json` override tests.
+- `specs/command_dispatch.json` drives CLI dispatch tests.
+- `internal/testspec` provides the shared spec loader used by the Go tests.
 
 ## Notes
 
-- This starter focuses on `dns-01` because that is the most common automation path for wildcard certificates and is closest to typical `acme.sh` usage.
-- DNS providers come from `go-acme/lego`, so the exact environment variables depend on the selected provider.
-- For AliDNS, `lego` expects `ALICLOUD_ACCESS_KEY` and `ALICLOUD_SECRET_KEY`.
-- `plan` inspects local certificate expiry and shows whether each entry would be issued or skipped.
-- `issue` and `renew` both behave safely by default: if the local certificate is still outside the renewal window, it is skipped unless `-force` is provided.
+- This codebase is moving toward broad `acme.sh` parity, but the implemented surface today is the strategy-based DNS automation core plus common certificate lifecycle commands.
+- `issue` supports direct domain issuance and CSR-based issuance through `csr_path`.
+- `renew` prefers ACME renew when local certificate material exists, and falls back to obtain when it does not.
+- `list` and `info` are metadata-backed and report certificate validity from local files.
+- For `neko233.com` integration, wildcard CNAME behavior requires `disable_cname_support` and `disable_complete_propagation` in the integration config.

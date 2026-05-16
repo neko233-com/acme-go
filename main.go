@@ -28,10 +28,18 @@ func run(args []string) error {
 	switch args[0] {
 	case "plan":
 		return runPlan(args[1:])
+	case "list":
+		return runList(args[1:])
+	case "info":
+		return runInfo(args[1:])
 	case "issue":
 		return runIssue(args[1:], false)
 	case "renew":
 		return runIssue(args[1:], true)
+	case "revoke":
+		return runRevoke(args[1:])
+	case "providers":
+		return acme.Providers(os.Stdout)
 	case "version":
 		fmt.Println(version)
 		return nil
@@ -93,13 +101,64 @@ func runIssue(args []string, renewMode bool) error {
 	return nil
 }
 
+func runList(args []string) error {
+	fs := flag.NewFlagSet("list", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+	return acme.List(cfg, os.Stdout)
+}
+
+func runInfo(args []string) error {
+	fs := flag.NewFlagSet("info", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	name := fs.String("name", "", "certificate entry name")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *name == "" {
+		return errors.New("-name is required")
+	}
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+	return acme.Info(cfg, *name, os.Stdout)
+}
+
+func runRevoke(args []string) error {
+	fs := flag.NewFlagSet("revoke", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	name := fs.String("name", "", "certificate entry name")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *name == "" {
+		return errors.New("-name is required")
+	}
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+	return acme.Revoke(cfg, *name, os.Stdout)
+}
+
 func printUsage() {
 	fmt.Print(`acme-go is a config-driven ACME client.
 
 Usage:
   acme-go plan   -config config.yaml
+  acme-go list   -config config.yaml
+  acme-go info   -config config.yaml -name example
   acme-go issue  -config config.yaml [-name example] [-force]
   acme-go renew  -config config.yaml [-name example] [-force]
+  acme-go revoke -config config.yaml -name example
+  acme-go providers
   acme-go version
 `)
 }

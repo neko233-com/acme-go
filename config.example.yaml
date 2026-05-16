@@ -7,9 +7,10 @@ account:
   accept_tos: true
 
 dns:
-  provider: cloudflare
+  provider: alicloud
   env:
-    CLOUDFLARE_DNS_API_TOKEN: ${CLOUDFLARE_DNS_API_TOKEN}
+    ALICLOUD_ACCESS_KEY: ${ALICLOUD_ACCESS_KEY}
+    ALICLOUD_SECRET_KEY: ${ALICLOUD_SECRET_KEY}
 
 certificates:
   - name: example-prod
@@ -18,6 +19,9 @@ certificates:
       - '*.example.com'
     output_dir: certs/example-prod
     key_type: ec256
+    preferred_chain: ""
+    must_staple: false
+    csr_path: ""
     renew_before_days: 30
     challenge: dns-01
     bundle: true

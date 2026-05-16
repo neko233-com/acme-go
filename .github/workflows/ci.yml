@@ -27,8 +27,16 @@ jobs:
           go-version: '1.26.0'
           cache: true
 
-      - name: Test
-        run: go test ./...
+      - name: Prepare Unix script
+        if: runner.os != 'Windows'
+        run: chmod +x test-auto.sh
 
-      - name: Vet
-        run: go vet ./...
+      - name: Run Windows automation script
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: test-auto.cmd --skip-integration
+
+      - name: Run Unix automation script
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./test-auto.sh --skip-integration

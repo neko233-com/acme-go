@@ -1,0 +1,50 @@
+[
+  {
+    "name": "help-command",
+    "args": ["help"],
+    "require_config": false,
+    "want_error_contains": ""
+  },
+  {
+    "name": "version-command",
+    "args": ["version"],
+    "require_config": false,
+    "want_error_contains": ""
+  },
+  {
+    "name": "providers-command",
+    "args": ["providers"],
+    "require_config": false,
+    "want_error_contains": ""
+  },
+  {
+    "name": "plan-command",
+    "args": ["plan"],
+    "require_config": true,
+    "want_error_contains": ""
+  },
+  {
+    "name": "list-command",
+    "args": ["list"],
+    "require_config": true,
+    "want_error_contains": ""
+  },
+  {
+    "name": "info-missing-name",
+    "args": ["info"],
+    "require_config": true,
+    "want_error_contains": "-name is required"
+  },
+  {
+    "name": "revoke-missing-name",
+    "args": ["revoke"],
+    "require_config": true,
+    "want_error_contains": "-name is required"
+  },
+  {
+    "name": "unknown-command",
+    "args": ["unknown"],
+    "require_config": false,
+    "want_error_contains": "unknown command"
+  }
+]

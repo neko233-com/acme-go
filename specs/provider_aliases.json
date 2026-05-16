@@ -1,0 +1,30 @@
+[
+  {
+    "canonical": "alicloud",
+    "inputs": ["alicloud", "aliyun", "alidns", "alibaba"]
+  },
+  {
+    "canonical": "aws",
+    "inputs": ["aws", "route53"]
+  },
+  {
+    "canonical": "azure",
+    "inputs": ["azure", "azuredns", "azure-dns"]
+  },
+  {
+    "canonical": "cloudflare",
+    "inputs": ["cloudflare", "cf"]
+  },
+  {
+    "canonical": "gcloud",
+    "inputs": ["gcloud", "gcp", "google cloud", "google-cloud"]
+  },
+  {
+    "canonical": "tencentcloud",
+    "inputs": ["tencentcloud", "tencent", "dnspod"]
+  },
+  {
+    "canonical": "volcengine",
+    "inputs": ["volcengine", "volc", "volc-dns"]
+  }
+]
