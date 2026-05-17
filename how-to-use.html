@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>acme-go How to Use | 使用说明</title>
+  <style>
+    :root {
+      --bg: #f5efe4;
+      --card: rgba(255, 252, 246, 0.88);
+      --ink: #1f2430;
+      --muted: #5e5f63;
+      --line: rgba(31, 36, 48, 0.12);
+      --accent: #0f766e;
+      --accent-strong: #9a3412;
+      --shadow: 0 20px 60px rgba(60, 42, 24, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.18), transparent 32%),
+        radial-gradient(circle at top right, rgba(154, 52, 18, 0.16), transparent 28%),
+        linear-gradient(180deg, #f9f4ea 0%, var(--bg) 100%);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    code {
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.95em;
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 64px;
+    }
+
+    .hero {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--accent-strong);
+      margin: 0 0 12px;
+    }
+
+    h1, h2, h3 {
+      font-weight: 600;
+      line-height: 1.15;
+      margin: 0 0 16px;
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 4.6rem);
+    }
+
+    h2 {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      margin-top: 28px;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    .lead {
+      font-size: 1.08rem;
+      color: var(--muted);
+      max-width: 72ch;
+    }
+
+    .jump {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .jump a {
+      display: block;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.62);
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .jump a:hover {
+      border-color: rgba(15, 118, 110, 0.28);
+      transform: translateY(-1px);
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(255, 252, 246, 0.9);
+      box-shadow: var(--shadow);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .panel h3 {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+    }
+
+    ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 16px;
+      overflow: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(31, 36, 48, 0.08);
+      background: #221f1a;
+      color: #f7f1e7;
+      font-size: 0.95rem;
+    }
+
+    .footer {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">acme-go guide</p>
+      <h1>How to Use | 使用说明</h1>
+      <p class="lead">A browser-friendly bilingual guide for issue, renew, challenge selection, install, deploy, hook wiring, and GitHub release packaging.</p>
+      <p class="lead">这是一个适合浏览器阅读的双语指南，覆盖签发、续期、challenge 选择、install、deploy、hook 配置以及 GitHub 发布打包流程。</p>
+      <div class="jump">
+        <a href="#quickstart">Quick Start | 快速开始</a>
+        <a href="#commands">Commands | 命令</a>
+        <a href="#challenges">Challenges | 模式</a>
+        <a href="#config">Config | 配置</a>
+        <a href="#deploy">Deploy and Hooks | 部署与钩子</a>
+        <a href="#release">Release | 发布</a>
+        <a href="#readme">README</a>
+      </div>
+    </section>
+
+    <section class="section" id="quickstart">
+      <h2>Quick Start | 快速开始</h2>
+      <div class="grid">
+        <article class="panel">
+          <h3>English</h3>
+          <ul>
+            <li>Copy <code>config.example.yaml</code> to <code>config.yaml</code>.</li>
+            <li>Create <code>.local.json</code> for provider secrets and local-only overrides.</li>
+            <li>Run <code>go run . providers</code> to check available DNS vendors.</li>
+            <li>Run <code>go run . plan -config config.yaml</code> before issuing.</li>
+            <li>Run <code>go run . issue -config config.yaml</code> to obtain certificates.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>中文</h3>
+          <ul>
+            <li>复制 <code>config.example.yaml</code> 为 <code>config.yaml</code>。</li>
+            <li>创建 <code>.local.json</code> 保存厂商密钥和仅本地生效的覆盖配置。</li>
+            <li>运行 <code>go run . providers</code> 查看支持的 DNS 厂商。</li>
+            <li>在签发前先执行 <code>go run . plan -config config.yaml</code>。</li>
+            <li>执行 <code>go run . issue -config config.yaml</code> 获取证书。</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="commands">
+      <h2>Commands | 命令</h2>
+      <pre><code>go run . providers
+go run . plan -config config.yaml
+go run . list -config config.yaml
+go run . info -config config.yaml -name example-prod
+go run . issue -config config.yaml [-name example-prod] [-force]
+go run . renew -config config.yaml [-name example-prod] [-force]
+go run . revoke -config config.yaml -name example-prod
+go run . install-cert -config config.yaml -name example-prod
+go run . deploy -config config.yaml -name example-prod
+go run . version</code></pre>
+    </section>
+
+    <section class="section" id="challenges">
+      <h2>Challenges | 模式</h2>
+      <div class="grid">
+        <article class="panel">
+          <h3>English</h3>
+          <ul>
+            <li><strong>dns-01</strong>: default mode backed by vendor DNS providers.</li>
+            <li><strong>http-01</strong>: local HTTP challenge server.</li>
+            <li><strong>standalone</strong>: local HTTP server flow with standalone semantics.</li>
+            <li><strong>webroot</strong>: writes ACME challenge files into <code>webroot_path</code>.</li>
+            <li><strong>tls-alpn-01</strong>: local TLS-ALPN challenge server.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>中文</h3>
+          <ul>
+            <li><strong>dns-01</strong>：默认模式，依赖 DNS 厂商 provider。</li>
+            <li><strong>http-01</strong>：启动本地 HTTP challenge 服务。</li>
+            <li><strong>standalone</strong>：使用本地 HTTP 服务的 standalone 运行方式。</li>
+            <li><strong>webroot</strong>：将 ACME challenge 文件写入 <code>webroot_path</code>。</li>
+            <li><strong>tls-alpn-01</strong>：启动本地 TLS-ALPN challenge 服务。</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="config">
+      <h2>Config | 配置</h2>
+      <pre><code>ca:
+  directory_url: https://acme-v02.api.letsencrypt.org/directory
+
+account:
+  email: ops@example.com
+  key_path: .acme/account.pem
+  accept_tos: true
+
+dns:
+  provider: alicloud
+  env:
+    ALICLOUD_ACCESS_KEY: ${ALICLOUD_ACCESS_KEY}
+    ALICLOUD_SECRET_KEY: ${ALICLOUD_SECRET_KEY}
+
+certificates:
+  - name: example-prod
+    domains:
+      - example.com
+      - '*.example.com'
+    output_dir: certs/example-prod
+    challenge: dns-01
+    http_bind: 0.0.0.0
+    http_port: "80"
+    tlsalpn_bind: 0.0.0.0
+    tlsalpn_port: "443"
+    webroot_path: ""
+    install:
+      key_file: /etc/nginx/ssl/example/privkey.pem
+      fullchain_file: /etc/nginx/ssl/example/fullchain.pem
+    deploy:
+      - name: edge-copy
+        type: copy
+        directory: deploy/example
+      - name: reload-nginx
+        type: command
+        command: nginx -s reload
+    hooks:
+      pre_issue: []
+      post_issue: []
+      pre_renew: []
+      post_renew: []
+      post_install: []
+      post_deploy: []
+      post_revoke: []</code></pre>
+    </section>
+
+    <section class="section" id="deploy">
+      <h2>Deploy and Hooks | 部署与钩子</h2>
+      <div class="grid">
+        <article class="panel">
+          <h3>English</h3>
+          <p><code>install</code> copies certificate files into fixed paths. <code>deploy</code> currently supports <code>copy</code> and <code>command</code> targets. Hooks can run before or after issue, renew, install, deploy, and revoke operations.</p>
+          <p>Common env vars: <code>ACME_CERT_NAME</code>, <code>ACME_CERT_FULLCHAIN_FILE</code>, <code>ACME_PROVIDER</code>, <code>ACME_CHALLENGE</code>, <code>ACME_DEPLOY_TARGET</code>.</p>
+        </article>
+        <article class="panel">
+          <h3>中文</h3>
+          <p><code>install</code> 会把证书复制到固定路径。<code>deploy</code> 当前支持 <code>copy</code> 与 <code>command</code>。Hooks 可在 issue、renew、install、deploy、revoke 的前后执行自定义命令。</p>
+          <p>常用环境变量：<code>ACME_CERT_NAME</code>、<code>ACME_CERT_FULLCHAIN_FILE</code>、<code>ACME_PROVIDER</code>、<code>ACME_CHALLENGE</code>、<code>ACME_DEPLOY_TARGET</code>。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="release">
+      <h2>Release | 发布</h2>
+      <div class="grid">
+        <article class="panel">
+          <h3>English</h3>
+          <p>The tag-based GitHub Actions release workflow builds archives for Linux, Windows, and macOS on amd64 and arm64, bundles docs, and publishes checksums.</p>
+          <pre><code>git tag v1.0.0
+git push origin v1.0.0</code></pre>
+        </article>
+        <article class="panel">
+          <h3>中文</h3>
+          <p>基于 tag 的 GitHub Actions 发布流程会为 Linux、Windows、macOS 的 amd64 与 arm64 构建压缩包，附带文档，并发布校验和文件。</p>
+          <pre><code>git tag v1.0.0
+git push origin v1.0.0</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="readme">
+      <h2>README</h2>
+      <p>Back to the repository overview: <a href="README.md">README.md</a></p>
+      <p>返回仓库入口说明：<a href="README.md">README.md</a></p>
+    </section>
+
+    <p class="footer">acme-go documentation page, maintained alongside the repository README and release workflow. | acme-go 文档页，与仓库 README 和发布流程保持同步维护。</p>
+  </main>
+</body>
+</html>
