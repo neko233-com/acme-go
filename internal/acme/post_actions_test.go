@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/config"
 )
 
 func TestRunSuccessActionsRunsInstallDeployAndHooks(t *testing.T) {
@@ -98,6 +98,8 @@ func writeCertificateFixtures(t *testing.T, outputDir string) {
 		"fullchain.pem": "-----BEGIN CERTIFICATE-----\nfullchain\n-----END CERTIFICATE-----\n",
 		"issuer.pem":    "-----BEGIN CERTIFICATE-----\nissuer\n-----END CERTIFICATE-----\n",
 		"privkey.pem":   "-----BEGIN PRIVATE KEY-----\nprivate\n-----END PRIVATE KEY-----\n",
+		"pubkey.pem":    "-----BEGIN PUBLIC KEY-----\npublic\n-----END PUBLIC KEY-----\n",
+		"metadata.json": "{}\n",
 	}
 	for name, content := range fixtures {
 		if err := os.WriteFile(filepath.Join(outputDir, name), []byte(content), 0o600); err != nil {

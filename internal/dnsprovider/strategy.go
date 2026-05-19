@@ -5,14 +5,14 @@ import (
 	"sort"
 	"strings"
 
-	"acme-go/internal/config"
-	"acme-go/internal/dnsprovider/alicloud"
-	"acme-go/internal/dnsprovider/aws"
-	"acme-go/internal/dnsprovider/azure"
-	"acme-go/internal/dnsprovider/cloudflare"
-	"acme-go/internal/dnsprovider/gcloud"
-	"acme-go/internal/dnsprovider/tencentcloud"
-	"acme-go/internal/dnsprovider/volcengine"
+	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/alicloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/aws"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/azure"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/cloudflare"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/gcloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/tencentcloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/volcengine"
 
 	"github.com/go-acme/lego/v4/challenge"
 )

@@ -1,7 +1,7 @@
 package gcloud
 
 import (
-	"acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/config"
 
 	"github.com/go-acme/lego/v4/challenge"
 	googleprovider "github.com/go-acme/lego/v4/providers/dns/gcloud"

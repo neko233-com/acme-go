@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"acme-go/internal/config"
-	"acme-go/internal/deploy"
-	"acme-go/internal/hook"
+	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/deploy"
+	"github.com/neko233-com/acme-go/internal/hook"
 )
 
 func runPreHooks(cert config.CertificateSpec, mode Mode, ctx deploy.Context, out io.Writer) error {
@@ -62,13 +61,16 @@ func deployExisting(cfg *config.Config, cert config.CertificateSpec, out io.Writ
 }
 
 func newDeployContext(cfg *config.Config, cert config.CertificateSpec) deploy.Context {
+	paths := cert.Paths()
 	return deploy.Context{
 		Name:         cert.Name,
 		OutputDir:    cert.OutputDir,
-		CertFile:     filepath.Join(cert.OutputDir, "cert.pem"),
-		KeyFile:      filepath.Join(cert.OutputDir, "privkey.pem"),
-		FullChain:    filepath.Join(cert.OutputDir, "fullchain.pem"),
-		ChainFile:    filepath.Join(cert.OutputDir, "issuer.pem"),
+		CertFile:     paths.CertFile,
+		KeyFile:      paths.KeyFile,
+		PublicKey:    paths.PublicKeyFile,
+		FullChain:    paths.FullChainFile,
+		ChainFile:    paths.ChainFile,
+		MetadataFile: paths.MetadataFile,
 		Provider:     cfg.DNS.Provider,
 		Challenge:    cert.Challenge,
 		Domain:       cert.Domains[0],
@@ -82,8 +84,8 @@ func deployEnv(ctx deploy.Context) map[string]string {
 }
 
 func validateLocalCertificateMaterial(cert config.CertificateSpec) error {
-	for _, name := range []string{"cert.pem", "privkey.pem", "fullchain.pem", "issuer.pem"} {
-		path := filepath.Join(cert.OutputDir, name)
+	paths := cert.Paths()
+	for _, path := range []string{paths.CertFile, paths.KeyFile, paths.PublicKeyFile, paths.FullChainFile, paths.ChainFile, paths.MetadataFile} {
 		if _, err := os.Stat(path); err != nil {
 			return fmt.Errorf("required local certificate file %s: %w", path, err)
 		}

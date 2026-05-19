@@ -10,10 +10,12 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"acme-go/internal/config"
+	"github.com/go-acme/lego/v4/certificate"
+	"github.com/neko233-com/acme-go/internal/config"
 )
 
 func TestCertificateNeedsRenew(t *testing.T) {
@@ -41,6 +43,48 @@ func TestCertificateNeedsRenew(t *testing.T) {
 	}
 }
 
+func TestWriteCertificateUsesConfiguredOutputFiles(t *testing.T) {
+	dir := t.TempDir()
+	cert := config.CertificateSpec{
+		Name:      "nginx-gui",
+		Domains:   []string{"example.com"},
+		OutputDir: dir,
+		OutputFiles: config.CertificateFiles{
+			CertFile:      "server.crt",
+			KeyFile:       "private/server.key",
+			PublicKeyFile: "server.pub",
+			FullChainFile: "server.fullchain.crt",
+			ChainFile:     "server.chain.crt",
+			MetadataFile:  "server.meta.json",
+		},
+	}
+	cfg := &config.Config{
+		CA:  config.CAConfig{DirectoryURL: "https://example.com/directory"},
+		DNS: config.DNSConfig{Provider: "cloudflare"},
+	}
+	resource := &certificate.Resource{
+		Domain:            "example.com",
+		Certificate:       createCertificatePEM(t, time.Now().Add(90*24*time.Hour)),
+		IssuerCertificate: createCertificatePEM(t, time.Now().Add(365*24*time.Hour)),
+		PrivateKey:        []byte("-----BEGIN PRIVATE KEY-----\nprivate\n-----END PRIVATE KEY-----\n"),
+	}
+
+	if err := writeCertificate(cert, cfg, resource); err != nil {
+		t.Fatalf("writeCertificate: %v", err)
+	}
+
+	paths := cert.Paths()
+	assertPathContains(t, paths.CertFile, "BEGIN CERTIFICATE")
+	assertPathContains(t, paths.KeyFile, "PRIVATE KEY")
+	assertPathContains(t, paths.PublicKeyFile, "PUBLIC KEY")
+	assertPathContains(t, paths.FullChainFile, "BEGIN CERTIFICATE")
+	assertPathContains(t, paths.ChainFile, "BEGIN CERTIFICATE")
+	assertPathContains(t, paths.MetadataFile, "nginx-gui")
+	if _, err := os.Stat(filepath.Join(dir, "fullchain.pem")); !os.IsNotExist(err) {
+		t.Fatalf("default fullchain.pem should not be written when custom output file is configured")
+	}
+}
+
 func createCertificatePEM(t *testing.T, notAfter time.Time) []byte {
 	t.Helper()
 
@@ -65,4 +109,15 @@ func createCertificatePEM(t *testing.T, notAfter time.Time) []byte {
 	}
 
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
+func assertPathContains(t *testing.T, path, want string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	if !strings.Contains(string(data), want) {
+		t.Fatalf("file %s does not contain %q", path, want)
+	}
 }

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"acme-go/internal/testspec"
+	"github.com/neko233-com/acme-go/internal/testspec"
 )
 
 type configSpec struct {

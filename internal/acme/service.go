@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"acme-go/internal/config"
-	"acme-go/internal/dnsprovider"
+	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/dnsprovider"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
@@ -317,7 +317,7 @@ func buildCSRRequest(cert config.CertificateSpec) (certificate.ObtainForCSRReque
 }
 
 func certificateNeedsRenew(cert config.CertificateSpec) (bool, time.Time, error) {
-	expiry, err := readCertificateExpiry(filepath.Join(cert.OutputDir, "fullchain.pem"))
+	expiry, err := readCertificateExpiry(cert.Paths().FullChainFile)
 	if err != nil {
 		return true, time.Time{}, err
 	}
@@ -345,6 +345,7 @@ func writeCertificate(cert config.CertificateSpec, cfg *config.Config, resource 
 	if err := os.MkdirAll(cert.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("create certificate dir: %w", err)
 	}
+	paths := cert.Paths()
 
 	leaf, chain, err := splitCertificate(resource.Certificate)
 	if err != nil {
@@ -355,28 +356,52 @@ func writeCertificate(cert config.CertificateSpec, cfg *config.Config, resource 
 	}
 	fullChain := append([]byte{}, leaf...)
 	fullChain = append(fullChain, chain...)
+	publicKey, err := publicKeyPEMFromCertificate(leaf)
+	if err != nil {
+		return err
+	}
 
 	files := map[string][]byte{
-		"cert.pem":      leaf,
-		"issuer.pem":    chain,
-		"fullchain.pem": fullChain,
-		"privkey.pem":   resource.PrivateKey,
+		paths.CertFile:      leaf,
+		paths.ChainFile:     chain,
+		paths.FullChainFile: fullChain,
+		paths.KeyFile:       resource.PrivateKey,
+		paths.PublicKeyFile: publicKey,
 	}
-	for name, content := range files {
+	for path, content := range files {
 		if len(content) == 0 {
 			continue
 		}
-		if err := os.WriteFile(filepath.Join(cert.OutputDir, name), content, 0o600); err != nil {
-			return fmt.Errorf("write %s: %w", name, err)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return fmt.Errorf("create certificate file dir for %s: %w", path, err)
+		}
+		if err := os.WriteFile(path, content, 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", path, err)
 		}
 	}
 
-	expiry, err := readCertificateExpiry(filepath.Join(cert.OutputDir, "fullchain.pem"))
+	expiry, err := readCertificateExpiry(paths.FullChainFile)
 	if err != nil {
 		return err
 	}
 
 	return writeMetadata(cert, cfg, resource, expiry)
+}
+
+func publicKeyPEMFromCertificate(data []byte) ([]byte, error) {
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("no certificate found for public key output")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse certificate for public key output: %w", err)
+	}
+	publicKey, err := x509.MarshalPKIXPublicKey(cert.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("marshal public key: %w", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKey}), nil
 }
 
 func splitCertificate(data []byte) ([]byte, []byte, error) {
@@ -409,15 +434,16 @@ func splitCertificate(data []byte) ([]byte, []byte, error) {
 }
 
 func loadCertificateResource(cert config.CertificateSpec) (certificate.Resource, error) {
-	certificatePEM, err := os.ReadFile(filepath.Join(cert.OutputDir, "fullchain.pem"))
+	paths := cert.Paths()
+	certificatePEM, err := os.ReadFile(paths.FullChainFile)
 	if err != nil {
 		return certificate.Resource{}, err
 	}
-	privateKey, err := os.ReadFile(filepath.Join(cert.OutputDir, "privkey.pem"))
+	privateKey, err := os.ReadFile(paths.KeyFile)
 	if err != nil {
 		return certificate.Resource{}, err
 	}
-	issuerPEM, _ := os.ReadFile(filepath.Join(cert.OutputDir, "issuer.pem"))
+	issuerPEM, _ := os.ReadFile(paths.ChainFile)
 	metadata, _ := readMetadata(cert)
 	resource := certificate.Resource{
 		Domain:            cert.Domains[0],

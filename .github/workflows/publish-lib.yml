@@ -1,0 +1,101 @@
+name: publish-lib
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional semantic version, for example 0.0.1 or v0.0.1. Empty means next patch version, starting at v0.0.1.
+        required: false
+        default: ''
+      dry_run:
+        description: Validate and compute the version without creating or pushing a tag.
+        required: true
+        default: true
+        type: boolean
+      run_tests:
+        description: Run the Go test suite before publishing.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  publish-lib:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+          cache: true
+
+      - name: Compute library version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          input="${{ github.event.inputs.version }}"
+          if [ -n "$input" ]; then
+            case "$input" in
+              v*) version="$input" ;;
+              *) version="v$input" ;;
+            esac
+          else
+            latest="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n 1 || true)"
+            if [ -z "$latest" ]; then
+              version="v0.0.1"
+            else
+              base="${latest#v}"
+              major="${base%%.*}"
+              rest="${base#*.}"
+              minor="${rest%%.*}"
+              patch="${rest##*.}"
+              version="v${major}.${minor}.$((patch + 1))"
+            fi
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Invalid version: $version" >&2
+            exit 1
+          fi
+          if git rev-parse "$version" >/dev/null 2>&1; then
+            echo "Tag $version already exists." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Library version: $version"
+
+      - name: Run tests
+        if: github.event.inputs.run_tests == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x test-auto.sh publish-lib.sh
+          ./test-auto.sh --skip-integration
+          go test ./pkg/acmego
+
+      - name: Dry run summary
+        if: github.event.inputs.dry_run == 'true'
+        shell: bash
+        run: |
+          echo "Dry run complete. Would publish ${{ steps.version.outputs.version }}."
+          echo "VS Code GitHub Actions extension can re-run this workflow with dry_run=false to create the tag."
+
+      - name: Create and push library tag
+        if: github.event.inputs.dry_run == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$version" -m "publish library $version"
+          git push origin "$version"
+          echo "Published $version. Consumers can run: go get github.com/neko233-com/acme-go/pkg/acmego@$version"

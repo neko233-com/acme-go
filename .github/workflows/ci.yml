@@ -5,6 +5,16 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+    inputs:
+      skip_integration:
+        description: Skip live ACME integration tests while debugging CI
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   test:
@@ -34,9 +44,19 @@ jobs:
       - name: Run Windows automation script
         if: runner.os == 'Windows'
         shell: cmd
-        run: test-auto.cmd --skip-integration
+        run: |
+          if "${{ github.event.inputs.skip_integration || 'true' }}"=="true" (
+            test-auto.cmd --skip-integration
+          ) else (
+            test-auto.cmd
+          )
 
       - name: Run Unix automation script
         if: runner.os != 'Windows'
         shell: bash
-        run: ./test-auto.sh --skip-integration
+        run: |
+          if [ "${{ github.event.inputs.skip_integration || 'true' }}" = "true" ]; then
+            ./test-auto.sh --skip-integration
+          else
+            ./test-auto.sh
+          fi

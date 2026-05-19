@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"acme-go/internal/config"
-	"acme-go/internal/hook"
+	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/hook"
 )
 
 type Context struct {
@@ -16,8 +16,10 @@ type Context struct {
 	OutputDir    string
 	CertFile     string
 	KeyFile      string
+	PublicKey    string
 	FullChain    string
 	ChainFile    string
+	MetadataFile string
 	Directory    string
 	Challenge    string
 	Provider     string
@@ -27,7 +29,7 @@ type Context struct {
 }
 
 func Install(spec config.InstallConfig, ctx Context) error {
-	if spec.CertFile == "" && spec.KeyFile == "" && spec.FullChainFile == "" && spec.ChainFile == "" {
+	if spec.CertFile == "" && spec.KeyFile == "" && spec.PublicKeyFile == "" && spec.FullChainFile == "" && spec.ChainFile == "" && spec.MetadataFile == "" {
 		return nil
 	}
 	if err := copyFileIfConfigured(ctx.CertFile, spec.CertFile); err != nil {
@@ -36,10 +38,16 @@ func Install(spec config.InstallConfig, ctx Context) error {
 	if err := copyFileIfConfigured(ctx.KeyFile, spec.KeyFile); err != nil {
 		return err
 	}
+	if err := copyFileIfConfigured(ctx.PublicKey, spec.PublicKeyFile); err != nil {
+		return err
+	}
 	if err := copyFileIfConfigured(ctx.FullChain, spec.FullChainFile); err != nil {
 		return err
 	}
 	if err := copyFileIfConfigured(ctx.ChainFile, spec.ChainFile); err != nil {
+		return err
+	}
+	if err := copyFileIfConfigured(ctx.MetadataFile, spec.MetadataFile); err != nil {
 		return err
 	}
 	return nil
@@ -70,17 +78,19 @@ func RunTargets(targets []config.DeployTarget, ctx Context, out io.Writer) error
 
 func BuildEnv(ctx Context) map[string]string {
 	return map[string]string{
-		"ACME_CERT_NAME":           ctx.Name,
-		"ACME_CERT_OUTPUT_DIR":     ctx.OutputDir,
-		"ACME_CERT_FILE":           ctx.CertFile,
-		"ACME_CERT_KEY_FILE":       ctx.KeyFile,
-		"ACME_CERT_FULLCHAIN_FILE": ctx.FullChain,
-		"ACME_CERT_CHAIN_FILE":     ctx.ChainFile,
-		"ACME_PROVIDER":            ctx.Provider,
-		"ACME_CHALLENGE":           ctx.Challenge,
-		"ACME_DOMAIN":              ctx.Domain,
-		"ACME_DOMAINS":             ctx.DomainsCSV,
-		"ACME_DIRECTORY_URL":       ctx.DirectoryURL,
+		"ACME_CERT_NAME":            ctx.Name,
+		"ACME_CERT_OUTPUT_DIR":      ctx.OutputDir,
+		"ACME_CERT_FILE":            ctx.CertFile,
+		"ACME_CERT_KEY_FILE":        ctx.KeyFile,
+		"ACME_CERT_PUBLIC_KEY_FILE": ctx.PublicKey,
+		"ACME_CERT_FULLCHAIN_FILE":  ctx.FullChain,
+		"ACME_CERT_CHAIN_FILE":      ctx.ChainFile,
+		"ACME_CERT_METADATA_FILE":   ctx.MetadataFile,
+		"ACME_PROVIDER":             ctx.Provider,
+		"ACME_CHALLENGE":            ctx.Challenge,
+		"ACME_DOMAIN":               ctx.Domain,
+		"ACME_DOMAINS":              ctx.DomainsCSV,
+		"ACME_DIRECTORY_URL":        ctx.DirectoryURL,
 	}
 }
 
@@ -92,8 +102,10 @@ func runCopyTarget(target config.DeployTarget, ctx Context) error {
 	}
 	certDest := target.CertFile
 	keyDest := target.KeyFile
+	publicKeyDest := target.PublicKeyFile
 	fullChainDest := target.FullChainFile
 	chainDest := target.ChainFile
+	metadataDest := target.MetadataFile
 	if target.Directory != "" {
 		if certDest == "" {
 			certDest = filepath.Join(target.Directory, "cert.pem")
@@ -101,11 +113,17 @@ func runCopyTarget(target config.DeployTarget, ctx Context) error {
 		if keyDest == "" {
 			keyDest = filepath.Join(target.Directory, "privkey.pem")
 		}
+		if publicKeyDest == "" {
+			publicKeyDest = filepath.Join(target.Directory, "pubkey.pem")
+		}
 		if fullChainDest == "" {
 			fullChainDest = filepath.Join(target.Directory, "fullchain.pem")
 		}
 		if chainDest == "" {
 			chainDest = filepath.Join(target.Directory, "issuer.pem")
+		}
+		if metadataDest == "" {
+			metadataDest = filepath.Join(target.Directory, "metadata.json")
 		}
 	}
 	if err := copyFileIfConfigured(ctx.CertFile, certDest); err != nil {
@@ -114,10 +132,16 @@ func runCopyTarget(target config.DeployTarget, ctx Context) error {
 	if err := copyFileIfConfigured(ctx.KeyFile, keyDest); err != nil {
 		return err
 	}
+	if err := copyFileIfConfigured(ctx.PublicKey, publicKeyDest); err != nil {
+		return err
+	}
 	if err := copyFileIfConfigured(ctx.FullChain, fullChainDest); err != nil {
 		return err
 	}
 	if err := copyFileIfConfigured(ctx.ChainFile, chainDest); err != nil {
+		return err
+	}
+	if err := copyFileIfConfigured(ctx.MetadataFile, metadataDest); err != nil {
 		return err
 	}
 	return nil

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"acme-go/internal/acme"
-	"acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/acme"
+	"github.com/neko233-com/acme-go/internal/config"
 )
 
 const version = "0.1.0"

@@ -18,6 +18,19 @@ certificates:
       - example.com
       - '*.example.com'
     output_dir: certs/example-prod
+    output_files:
+      # Leaf certificate. Suggested names: cert.pem, tls.crt, server.crt.
+      cert_file: cert.pem
+      # Private key. Suggested names: privkey.pem, tls.key, server.key.
+      key_file: privkey.pem
+      # Public key derived from the certificate. Suggested names: pubkey.pem, server.pub.
+      public_key_file: pubkey.pem
+      # Leaf + issuer chain. Suggested names: fullchain.pem, fullchain.crt, server.crt for nginx.
+      fullchain_file: fullchain.pem
+      # Issuer chain only. Suggested names: issuer.pem, chain.pem, ca.crt.
+      chain_file: issuer.pem
+      # Renewal metadata. Suggested names: metadata.json, acme.json.
+      metadata_file: metadata.json
     key_type: ec256
     preferred_chain: ""
     must_staple: false
@@ -31,7 +44,9 @@ certificates:
     tlsalpn_port: "443"
     install:
       key_file: ""
+      public_key_file: ""
       fullchain_file: ""
+      metadata_file: ""
     deploy:
       - name: local-copy
         type: copy

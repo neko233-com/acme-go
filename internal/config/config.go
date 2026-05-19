@@ -38,31 +38,74 @@ type DNSConfig struct {
 }
 
 type CertificateSpec struct {
-	Name            string         `yaml:"name" json:"name"`
-	Domains         []string       `yaml:"domains" json:"domains"`
-	OutputDir       string         `yaml:"output_dir" json:"output_dir"`
-	KeyType         string         `yaml:"key_type" json:"key_type"`
-	Bundle          *bool          `yaml:"bundle" json:"bundle"`
-	MustStaple      bool           `yaml:"must_staple" json:"must_staple"`
-	PreferredChain  string         `yaml:"preferred_chain" json:"preferred_chain"`
-	CSRPath         string         `yaml:"csr_path" json:"csr_path"`
-	WebrootPath     string         `yaml:"webroot_path" json:"webroot_path"`
-	HTTPBind        string         `yaml:"http_bind" json:"http_bind"`
-	HTTPPort        string         `yaml:"http_port" json:"http_port"`
-	TLSALPNBind     string         `yaml:"tlsalpn_bind" json:"tlsalpn_bind"`
-	TLSALPNPort     string         `yaml:"tlsalpn_port" json:"tlsalpn_port"`
-	RenewBeforeDays int            `yaml:"renew_before_days" json:"renew_before_days"`
-	Challenge       string         `yaml:"challenge" json:"challenge"`
-	Install         InstallConfig  `yaml:"install" json:"install"`
-	Deploy          []DeployTarget `yaml:"deploy" json:"deploy"`
-	Hooks           HookConfig     `yaml:"hooks" json:"hooks"`
+	Name            string           `yaml:"name" json:"name"`
+	Domains         []string         `yaml:"domains" json:"domains"`
+	OutputDir       string           `yaml:"output_dir" json:"output_dir"`
+	OutputFiles     CertificateFiles `yaml:"output_files" json:"output_files"`
+	KeyType         string           `yaml:"key_type" json:"key_type"`
+	Bundle          *bool            `yaml:"bundle" json:"bundle"`
+	MustStaple      bool             `yaml:"must_staple" json:"must_staple"`
+	PreferredChain  string           `yaml:"preferred_chain" json:"preferred_chain"`
+	CSRPath         string           `yaml:"csr_path" json:"csr_path"`
+	WebrootPath     string           `yaml:"webroot_path" json:"webroot_path"`
+	HTTPBind        string           `yaml:"http_bind" json:"http_bind"`
+	HTTPPort        string           `yaml:"http_port" json:"http_port"`
+	TLSALPNBind     string           `yaml:"tlsalpn_bind" json:"tlsalpn_bind"`
+	TLSALPNPort     string           `yaml:"tlsalpn_port" json:"tlsalpn_port"`
+	RenewBeforeDays int              `yaml:"renew_before_days" json:"renew_before_days"`
+	Challenge       string           `yaml:"challenge" json:"challenge"`
+	Install         InstallConfig    `yaml:"install" json:"install"`
+	Deploy          []DeployTarget   `yaml:"deploy" json:"deploy"`
+	Hooks           HookConfig       `yaml:"hooks" json:"hooks"`
+}
+
+type CertificateFiles struct {
+	CertFile      string `yaml:"cert_file" json:"cert_file"`
+	KeyFile       string `yaml:"key_file" json:"key_file"`
+	PublicKeyFile string `yaml:"public_key_file" json:"public_key_file"`
+	FullChainFile string `yaml:"fullchain_file" json:"fullchain_file"`
+	ChainFile     string `yaml:"chain_file" json:"chain_file"`
+	MetadataFile  string `yaml:"metadata_file" json:"metadata_file"`
+}
+
+type CertificatePaths struct {
+	CertFile      string
+	KeyFile       string
+	PublicKeyFile string
+	FullChainFile string
+	ChainFile     string
+	MetadataFile  string
+}
+
+func (c CertificateSpec) Paths() CertificatePaths {
+	return CertificatePaths{
+		CertFile:      resolveCertificatePath(c.OutputDir, c.OutputFiles.CertFile, "cert.pem"),
+		KeyFile:       resolveCertificatePath(c.OutputDir, c.OutputFiles.KeyFile, "privkey.pem"),
+		PublicKeyFile: resolveCertificatePath(c.OutputDir, c.OutputFiles.PublicKeyFile, "pubkey.pem"),
+		FullChainFile: resolveCertificatePath(c.OutputDir, c.OutputFiles.FullChainFile, "fullchain.pem"),
+		ChainFile:     resolveCertificatePath(c.OutputDir, c.OutputFiles.ChainFile, "issuer.pem"),
+		MetadataFile:  resolveCertificatePath(c.OutputDir, c.OutputFiles.MetadataFile, "metadata.json"),
+	}
+}
+
+func resolveCertificatePath(outputDir, configured, fallback string) string {
+	name := configured
+	if name == "" {
+		name = fallback
+	}
+	if filepath.IsAbs(name) {
+		return name
+	}
+	return filepath.Join(outputDir, name)
 }
 
 type InstallConfig struct {
 	CertFile      string `yaml:"cert_file" json:"cert_file"`
 	KeyFile       string `yaml:"key_file" json:"key_file"`
+	PublicKeyFile string `yaml:"public_key_file" json:"public_key_file"`
 	FullChainFile string `yaml:"fullchain_file" json:"fullchain_file"`
 	ChainFile     string `yaml:"chain_file" json:"chain_file"`
+	MetadataFile  string `yaml:"metadata_file" json:"metadata_file"`
 }
 
 type DeployTarget struct {
@@ -72,8 +115,10 @@ type DeployTarget struct {
 	Command       string            `yaml:"command" json:"command"`
 	CertFile      string            `yaml:"cert_file" json:"cert_file"`
 	KeyFile       string            `yaml:"key_file" json:"key_file"`
+	PublicKeyFile string            `yaml:"public_key_file" json:"public_key_file"`
 	FullChainFile string            `yaml:"fullchain_file" json:"fullchain_file"`
 	ChainFile     string            `yaml:"chain_file" json:"chain_file"`
+	MetadataFile  string            `yaml:"metadata_file" json:"metadata_file"`
 	Env           map[string]string `yaml:"env" json:"env"`
 }
 
@@ -188,6 +233,7 @@ func (c *Config) merge(override Config) {
 		if incoming.OutputDir != "" {
 			merged.OutputDir = incoming.OutputDir
 		}
+		mergeCertificateFiles(&merged.OutputFiles, incoming.OutputFiles)
 		if incoming.KeyType != "" {
 			merged.KeyType = incoming.KeyType
 		}
@@ -338,6 +384,27 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+func mergeCertificateFiles(base *CertificateFiles, incoming CertificateFiles) {
+	if incoming.CertFile != "" {
+		base.CertFile = incoming.CertFile
+	}
+	if incoming.KeyFile != "" {
+		base.KeyFile = incoming.KeyFile
+	}
+	if incoming.PublicKeyFile != "" {
+		base.PublicKeyFile = incoming.PublicKeyFile
+	}
+	if incoming.FullChainFile != "" {
+		base.FullChainFile = incoming.FullChainFile
+	}
+	if incoming.ChainFile != "" {
+		base.ChainFile = incoming.ChainFile
+	}
+	if incoming.MetadataFile != "" {
+		base.MetadataFile = incoming.MetadataFile
+	}
+}
+
 func mergeInstallConfig(base *InstallConfig, incoming InstallConfig) {
 	if incoming.CertFile != "" {
 		base.CertFile = incoming.CertFile
@@ -345,11 +412,17 @@ func mergeInstallConfig(base *InstallConfig, incoming InstallConfig) {
 	if incoming.KeyFile != "" {
 		base.KeyFile = incoming.KeyFile
 	}
+	if incoming.PublicKeyFile != "" {
+		base.PublicKeyFile = incoming.PublicKeyFile
+	}
 	if incoming.FullChainFile != "" {
 		base.FullChainFile = incoming.FullChainFile
 	}
 	if incoming.ChainFile != "" {
 		base.ChainFile = incoming.ChainFile
+	}
+	if incoming.MetadataFile != "" {
+		base.MetadataFile = incoming.MetadataFile
 	}
 }
 
@@ -377,12 +450,9 @@ func mergeHooks(base *HookConfig, incoming HookConfig) {
 	}
 }
 
-func validateInstallConfig(name string, install InstallConfig) error {
-	if install.CertFile == "" && install.KeyFile == "" && install.FullChainFile == "" && install.ChainFile == "" {
+func validateInstallConfig(_ string, install InstallConfig) error {
+	if install.CertFile == "" && install.KeyFile == "" && install.PublicKeyFile == "" && install.FullChainFile == "" && install.ChainFile == "" && install.MetadataFile == "" {
 		return nil
-	}
-	if install.KeyFile == "" || install.FullChainFile == "" {
-		return fmt.Errorf("certificate %q install config requires at least key_file and fullchain_file", name)
 	}
 	return nil
 }
@@ -391,7 +461,7 @@ func validateDeployTargets(name string, targets []DeployTarget) error {
 	for _, target := range targets {
 		switch strings.ToLower(target.Type) {
 		case "", "copy":
-			if target.Directory == "" && target.CertFile == "" && target.KeyFile == "" && target.FullChainFile == "" && target.ChainFile == "" {
+			if target.Directory == "" && target.CertFile == "" && target.KeyFile == "" && target.PublicKeyFile == "" && target.FullChainFile == "" && target.ChainFile == "" && target.MetadataFile == "" {
 				return fmt.Errorf("certificate %q deploy target %q requires directory or explicit output files", name, target.Name)
 			}
 		case "command":

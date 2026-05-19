@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
-	"acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/config"
 
 	"github.com/go-acme/lego/v4/certificate"
 )
@@ -87,5 +86,5 @@ func updateRevocationMetadata(cert config.CertificateSpec) error {
 }
 
 func metadataPath(cert config.CertificateSpec) string {
-	return filepath.Join(cert.OutputDir, "metadata.json")
+	return cert.Paths().MetadataFile
 }

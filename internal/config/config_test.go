@@ -100,3 +100,38 @@ certificates:
 		t.Fatalf("expected local certificate override, got %q", got)
 	}
 }
+
+func TestCertificatePathsUseConfiguredOutputFiles(t *testing.T) {
+	dir := t.TempDir()
+	cert := CertificateSpec{
+		OutputDir: dir,
+		OutputFiles: CertificateFiles{
+			CertFile:      "nginx.crt",
+			KeyFile:       "private/nginx.key",
+			PublicKeyFile: "nginx.pub",
+			FullChainFile: filepath.Join(dir, "public", "fullchain.crt"),
+			ChainFile:     "ca-chain.crt",
+			MetadataFile:  "nginx.meta.json",
+		},
+	}
+
+	paths := cert.Paths()
+	if paths.CertFile != filepath.Join(dir, "nginx.crt") {
+		t.Fatalf("cert path: got %q", paths.CertFile)
+	}
+	if paths.KeyFile != filepath.Join(dir, "private", "nginx.key") {
+		t.Fatalf("key path: got %q", paths.KeyFile)
+	}
+	if paths.PublicKeyFile != filepath.Join(dir, "nginx.pub") {
+		t.Fatalf("public key path: got %q", paths.PublicKeyFile)
+	}
+	if paths.FullChainFile != filepath.Join(dir, "public", "fullchain.crt") {
+		t.Fatalf("fullchain path: got %q", paths.FullChainFile)
+	}
+	if paths.ChainFile != filepath.Join(dir, "ca-chain.crt") {
+		t.Fatalf("chain path: got %q", paths.ChainFile)
+	}
+	if paths.MetadataFile != filepath.Join(dir, "nginx.meta.json") {
+		t.Fatalf("metadata path: got %q", paths.MetadataFile)
+	}
+}
