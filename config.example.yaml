@@ -7,10 +7,16 @@ account:
   accept_tos: true
 
 dns:
-  provider: alicloud
-  env:
-    ALICLOUD_ACCESS_KEY: ${ALICLOUD_ACCESS_KEY}
-    ALICLOUD_SECRET_KEY: ${ALICLOUD_SECRET_KEY}
+  # Canonical names and aliases are both supported, including cn/intl/global forms.
+  provider: alicloud-cn
+  # Optional: cn | intl | global. Some vendors use this to choose a better default region.
+  account_mode: cn
+  # Prefer credentials for common providers. acme-go maps these into provider env vars automatically.
+  credentials:
+    access_key: ${ALICLOUD_ACCESS_KEY}
+    secret_key: ${ALICLOUD_SECRET_KEY}
+  # env still works and has higher priority when you need vendor-specific overrides.
+  env: {}
 
 certificates:
   - name: example-prod
@@ -50,10 +56,10 @@ certificates:
     deploy:
       - name: local-copy
         type: copy
-        directory: ""
+        directory: deploy/example-prod
       - name: reload-service
         type: command
-        command: ""
+        command: echo reload-service
     hooks:
       pre_issue: []
       post_issue: []

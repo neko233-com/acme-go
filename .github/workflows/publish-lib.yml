@@ -1,4 +1,5 @@
 name: publish-lib
+run-name: publish-lib ${{ github.event.inputs.version || 'next' }} dry-run=${{ github.event.inputs.dry_run }}
 
 on:
   workflow_dispatch:

@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neko233.com/schemas/acme-go/config.schema.json",
+  "title": "acme-go configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["account", "dns", "certificates"],
+  "properties": {
+    "ca": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "directory_url": {
+          "type": "string",
+          "format": "uri",
+          "default": "https://acme-v02.api.letsencrypt.org/directory"
+        }
+      }
+    },
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["email", "accept_tos"],
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "key_path": { "type": "string", "default": ".acme/account.pem" },
+        "accept_tos": { "type": "boolean", "const": true }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["alicloud", "aliyun", "alidns", "alicloud-cn", "alicloud-intl", "alicloud-global", "cloudflare", "cloudflare-intl", "volcengine", "volc", "volcengine-cn", "volcengine-intl", "volcengine-global", "tencentcloud", "tencent", "dnspod", "tencentcloud-cn", "tencentcloud-intl", "dnspod-intl", "azure", "azure-dns", "azure-global", "gcloud", "gcp", "google cloud", "google-cloud", "gcloud-global", "aws", "route53", "aws-global"]
+        },
+        "account_mode": {
+          "type": "string",
+          "enum": ["cn", "intl", "global", "china", "domestic", "international", "overseas"]
+        },
+        "region": {
+          "type": "string",
+          "description": "Optional vendor region override. Example: cn-beijing or ap-singapore for Volcengine."
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "access_key": { "type": "string", "description": "Common access key field for AliCloud, Volcengine, AWS and similar providers." },
+            "secret_key": { "type": "string", "description": "Common secret key field for AliCloud, Volcengine, AWS and similar providers." },
+            "secret_id": { "type": "string", "description": "Tencent-style secret id, also accepted as access key for compatible vendors." },
+            "secret_token": { "type": "string", "description": "Optional session token for temporary credentials." },
+            "api_token": { "type": "string", "description": "API token for providers like Cloudflare." },
+            "api_key": { "type": "string", "description": "Fallback API key field for vendors that still use key-based auth." },
+            "api_email": { "type": "string", "description": "Optional API email for Cloudflare legacy auth." },
+            "project_id": { "type": "string", "description": "Google Cloud project id." },
+            "service_account_file": { "type": "string", "description": "Path to a Google Cloud service account JSON file." },
+            "subscription_id": { "type": "string", "description": "Azure subscription id." },
+            "tenant_id": { "type": "string", "description": "Azure tenant id." },
+            "client_id": { "type": "string", "description": "Azure client id." },
+            "client_secret": { "type": "string", "description": "Azure client secret." },
+            "resource_group": { "type": "string", "description": "Azure DNS resource group." }
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "disable_cname_support": { "type": "boolean" },
+        "disable_complete_propagation": { "type": "boolean" },
+        "recursive_nameservers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "certificates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/certificate" }
+    }
+  },
+  "$defs": {
+    "certificateFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cert_file": { "type": "string", "description": "Leaf certificate. Suggested: cert.pem, tls.crt, server.crt." },
+        "key_file": { "type": "string", "description": "Private key. Suggested: privkey.pem, tls.key, server.key." },
+        "public_key_file": { "type": "string", "description": "Public key. Suggested: pubkey.pem, server.pub." },
+        "fullchain_file": { "type": "string", "description": "Leaf plus issuer chain. Suggested: fullchain.pem, fullchain.crt, server.crt for nginx." },
+        "chain_file": { "type": "string", "description": "Issuer chain only. Suggested: issuer.pem, chain.pem, ca.crt." },
+        "metadata_file": { "type": "string", "description": "Renewal metadata. Suggested: metadata.json, acme.json." }
+      }
+    },
+    "installConfig": {
+      "$ref": "#/$defs/certificateFiles"
+    },
+    "deployTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["", "copy", "command"] },
+        "directory": { "type": "string" },
+        "command": { "type": "string" },
+        "cert_file": { "type": "string" },
+        "key_file": { "type": "string" },
+        "public_key_file": { "type": "string" },
+        "fullchain_file": { "type": "string" },
+        "chain_file": { "type": "string" },
+        "metadata_file": { "type": "string" },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pre_issue": { "$ref": "#/$defs/commands" },
+        "post_issue": { "$ref": "#/$defs/commands" },
+        "pre_renew": { "$ref": "#/$defs/commands" },
+        "post_renew": { "$ref": "#/$defs/commands" },
+        "post_revoke": { "$ref": "#/$defs/commands" },
+        "post_install": { "$ref": "#/$defs/commands" },
+        "post_deploy": { "$ref": "#/$defs/commands" }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "certificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domains"],
+      "properties": {
+        "name": { "type": "string" },
+        "domains": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "output_dir": { "type": "string" },
+        "output_files": { "$ref": "#/$defs/certificateFiles" },
+        "key_type": { "type": "string", "enum": ["ec256", "ec384", "rsa2048", "rsa4096", "rsa8192"] },
+        "bundle": { "type": "boolean" },
+        "must_staple": { "type": "boolean" },
+        "preferred_chain": { "type": "string" },
+        "csr_path": { "type": "string" },
+        "webroot_path": { "type": "string" },
+        "http_bind": { "type": "string" },
+        "http_port": { "type": "string" },
+        "tlsalpn_bind": { "type": "string" },
+        "tlsalpn_port": { "type": "string" },
+        "renew_before_days": { "type": "integer", "minimum": 1 },
+        "challenge": { "type": "string", "enum": ["dns-01", "http-01", "webroot", "standalone", "tls-alpn-01"] },
+        "install": { "$ref": "#/$defs/installConfig" },
+        "deploy": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/deployTarget" }
+        },
+        "hooks": { "$ref": "#/$defs/hooks" }
+      }
+    }
+  }
+}

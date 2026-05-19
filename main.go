@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -8,9 +9,19 @@ import (
 
 	"github.com/neko233-com/acme-go/internal/acme"
 	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/doc"
+	"github.com/neko233-com/acme-go/internal/update"
 )
 
-const version = "0.1.0"
+var version = "dev"
+
+var (
+	openGuide      = doc.OpenGuide
+	resolveGuide   = doc.ResolveGuidePath
+	locateExecPath = os.Executable
+	locateWorkDir  = os.Getwd
+	autoUpdate     = update.MaybeAutoUpdate
+)
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -24,10 +35,22 @@ func run(args []string) error {
 		printUsage()
 		return nil
 	}
+	if shouldAutoUpdate(args[0]) {
+		executablePath, err := locateExecPath()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: auto update skipped: locate executable: %v\n", err)
+		} else if err := autoUpdate(version, executablePath, os.Stderr); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: auto update skipped: %v\n", err)
+		}
+	}
 
 	switch args[0] {
+	case "validate":
+		return runValidate(args[1:])
 	case "plan":
 		return runPlan(args[1:])
+	case "paths":
+		return runPaths(args[1:])
 	case "list":
 		return runList(args[1:])
 	case "info":
@@ -45,14 +68,51 @@ func run(args []string) error {
 	case "providers":
 		return acme.Providers(os.Stdout)
 	case "version":
-		fmt.Println(version)
-		return nil
+		return runVersion(args[1:])
+	case "upgrade":
+		return runUpgrade(args[1:])
+	case "doc":
+		return runDoc(args[1:])
 	case "help", "-h", "--help":
-		printUsage()
-		return nil
+		return runHelp(args[1:])
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+func shouldAutoUpdate(command string) bool {
+	switch command {
+	case "help", "-h", "--help", "doc", "version", "upgrade":
+		return false
+	default:
+		return true
+	}
+}
+
+func runHelp(args []string) error {
+	if len(args) == 0 {
+		printUsage()
+		return nil
+	}
+	helpText, err := commandHelp(args[0])
+	if err != nil {
+		return err
+	}
+	fmt.Print(helpText)
+	return nil
+}
+
+func runValidate(args []string) error {
+	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+	return acme.Validate(cfg, os.Stdout)
 }
 
 func runPlan(args []string) error {
@@ -69,6 +129,20 @@ func runPlan(args []string) error {
 	}
 
 	return acme.Plan(cfg, *name, os.Stdout)
+}
+
+func runPaths(args []string) error {
+	fs := flag.NewFlagSet("paths", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	name := fs.String("name", "", "show paths only for a single certificate entry")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+	return acme.Paths(cfg, *name, os.Stdout)
 }
 
 func runIssue(args []string, renewMode bool) error {
@@ -186,19 +260,117 @@ func runDeploy(args []string) error {
 	return acme.Deploy(cfg, *name, os.Stdout)
 }
 
+func runVersion(args []string) error {
+	fs := flag.NewFlagSet("version", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	info, err := update.CheckVersion(version)
+	if err != nil {
+		return err
+	}
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(info)
+}
+
+func runUpgrade(args []string) error {
+	fs := flag.NewFlagSet("upgrade", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	executablePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("locate executable: %w", err)
+	}
+	return update.Upgrade(version, executablePath, os.Stdout)
+}
+
+func runDoc(args []string) error {
+	fs := flag.NewFlagSet("doc", flag.ContinueOnError)
+	printOnly := fs.Bool("print-path", false, "print the resolved HTML guide path without opening it")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	workingDir, err := locateWorkDir()
+	if err != nil {
+		return fmt.Errorf("locate working directory: %w", err)
+	}
+	executablePath, err := locateExecPath()
+	if err != nil {
+		return fmt.Errorf("locate executable: %w", err)
+	}
+	if *printOnly {
+		guidePath, err := resolveGuide(workingDir, executablePath)
+		if err != nil {
+			return err
+		}
+		fmt.Println(guidePath)
+		return nil
+	}
+	guidePath, err := openGuide(workingDir, executablePath)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "opened %s\n", guidePath)
+	return nil
+}
+
 func printUsage() {
 	fmt.Print(`acme-go is a config-driven ACME client.
 
 Usage:
+	acme-go help [command]
+	acme-go doc [-print-path]
+	acme-go validate -config config.yaml
   acme-go plan   -config config.yaml
+	acme-go paths  -config config.yaml [-name example]
   acme-go list   -config config.yaml
   acme-go info   -config config.yaml -name example
   acme-go issue  -config config.yaml [-name example] [-force]
   acme-go renew  -config config.yaml [-name example] [-force]
   acme-go revoke -config config.yaml -name example
-	acme-go install-cert -config config.yaml -name example
-	acme-go deploy -config config.yaml -name example
+  acme-go install-cert -config config.yaml -name example
+  acme-go deploy -config config.yaml -name example
   acme-go providers
   acme-go version
+	acme-go upgrade
 `)
+}
+
+func commandHelp(name string) (string, error) {
+	switch name {
+	case "help", "-h", "--help":
+		return "acme-go help [command]\nShow overall usage or detailed help for a single command.\n", nil
+	case "doc":
+		return "acme-go doc [-print-path]\nOpen how-to-use.html in the default browser, or print its resolved path.\n", nil
+	case "validate":
+		return "acme-go validate -config config.yaml\nLoad config, merge .local.json, apply defaults, and print a JSON summary.\n", nil
+	case "plan":
+		return "acme-go plan -config config.yaml [-name example]\nShow which certificates would issue or skip based on local state.\n", nil
+	case "paths":
+		return "acme-go paths -config config.yaml [-name example]\nPrint resolved output paths for certificate files.\n", nil
+	case "list":
+		return "acme-go list -config config.yaml\nList all configured certificates and their current status.\n", nil
+	case "info":
+		return "acme-go info -config config.yaml -name example\nShow detailed information for a single certificate entry.\n", nil
+	case "issue":
+		return "acme-go issue -config config.yaml [-name example] [-force]\nIssue a new certificate or replace an existing one.\n", nil
+	case "renew":
+		return "acme-go renew -config config.yaml [-name example] [-force]\nRenew certificates that are due, or force renewal.\n", nil
+	case "revoke":
+		return "acme-go revoke -config config.yaml -name example\nRevoke a locally stored certificate through the ACME server.\n", nil
+	case "install-cert":
+		return "acme-go install-cert -config config.yaml -name example\nCopy generated certificate files into configured install destinations.\n", nil
+	case "deploy":
+		return "acme-go deploy -config config.yaml -name example\nRun configured deploy targets with existing local certificate material.\n", nil
+	case "providers":
+		return "acme-go providers\nPrint supported DNS providers and aliases as JSON.\n", nil
+	case "version":
+		return "acme-go version\nPrint current version, latest GitHub release, and concise change summary.\n", nil
+	case "upgrade":
+		return "acme-go upgrade\nDownload the latest release artifact for the current OS and architecture and replace the local binary. Automatic update checks are enabled by default; set ACME_GO_AUTO_UPDATE=false to disable them.\n", nil
+	default:
+		return "", fmt.Errorf("unknown help topic %q", name)
+	}
 }

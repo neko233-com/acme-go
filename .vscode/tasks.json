@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "validate: tests",
+      "type": "shell",
+      "command": "go test ./...",
+      "group": "test",
+      "problemMatcher": "$go"
+    },
+    {
+      "label": "validate: diff check",
+      "type": "shell",
+      "command": "git diff --check",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "validate: config example",
+      "type": "shell",
+      "command": "go run . validate -config config.example.yaml",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "validate: github actions",
+      "type": "shell",
+      "command": "go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/ci.yml .github/workflows/publish-lib.yml .github/workflows/release.yml",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

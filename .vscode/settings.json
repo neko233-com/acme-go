@@ -1,0 +1,14 @@
+{
+  "yaml.schemas": {
+    "./config.schema.json": [
+      "config.yaml",
+      "config.*.yaml"
+    ]
+  },
+  "yaml.validate": true,
+  "gopls": {
+    "build.buildFlags": [
+      "-tags=integration"
+    ]
+  }
+}

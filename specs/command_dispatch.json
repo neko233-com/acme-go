@@ -6,8 +6,20 @@
     "want_error_contains": ""
   },
   {
+    "name": "help-version-command",
+    "args": ["help", "version"],
+    "require_config": false,
+    "want_error_contains": ""
+  },
+  {
     "name": "version-command",
     "args": ["version"],
+    "require_config": false,
+    "want_error_contains": ""
+  },
+  {
+    "name": "doc-print-path-command",
+    "args": ["doc", "-print-path"],
     "require_config": false,
     "want_error_contains": ""
   },
@@ -20,6 +32,18 @@
   {
     "name": "plan-command",
     "args": ["plan"],
+    "require_config": true,
+    "want_error_contains": ""
+  },
+  {
+    "name": "validate-command",
+    "args": ["validate"],
+    "require_config": true,
+    "want_error_contains": ""
+  },
+  {
+    "name": "paths-command",
+    "args": ["paths"],
     "require_config": true,
     "want_error_contains": ""
   },

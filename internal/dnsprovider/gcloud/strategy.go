@@ -11,7 +11,9 @@ type Strategy struct{}
 
 func (Strategy) ID() string { return "gcloud" }
 
-func (Strategy) Aliases() []string { return []string{"gcp", "googlecloud", "google-cloud", "google"} }
+func (Strategy) Aliases() []string {
+	return []string{"gcp", "googlecloud", "google-cloud", "google", "gcloud-intl", "gcloud-global"}
+}
 
 func (Strategy) NewProvider(_ config.DNSConfig) (challenge.Provider, error) {
 	return googleprovider.NewDNSProvider()

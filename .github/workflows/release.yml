@@ -43,6 +43,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.ref_name }}
         shell: bash
         run: |
           set -euo pipefail
@@ -54,7 +55,8 @@ jobs:
           binary="acme-go${suffix}"
           outdir="dist/acme-go_${GOOS}_${GOARCH}"
           mkdir -p "$outdir"
-          go build -trimpath -ldflags "-s -w" -o "$outdir/$binary" .
+          version_value="${VERSION#v}"
+          go build -trimpath -ldflags "-s -w -X main.version=${version_value}" -o "$outdir/$binary" .
           cp README.md "$outdir/README.md"
           cp config.example.yaml "$outdir/config.example.yaml"
           cp how-to-use.html "$outdir/how-to-use.html"

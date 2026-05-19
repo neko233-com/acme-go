@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/neko233-com/acme-go/internal/config"
@@ -13,14 +12,15 @@ import (
 )
 
 type CertificateInfo struct {
-	Name        string     `json:"name"`
-	Domains     []string   `json:"domains"`
-	OutputDir   string     `json:"output_dir"`
-	Provider    string     `json:"provider"`
-	Status      string     `json:"status"`
-	NotAfter    *time.Time `json:"not_after,omitempty"`
-	RenewBefore int        `json:"renew_before_days"`
-	Metadata    *Metadata  `json:"metadata,omitempty"`
+	Name        string                  `json:"name"`
+	Domains     []string                `json:"domains"`
+	OutputDir   string                  `json:"output_dir"`
+	Paths       config.CertificatePaths `json:"paths"`
+	Provider    string                  `json:"provider"`
+	Status      string                  `json:"status"`
+	NotAfter    *time.Time              `json:"not_after,omitempty"`
+	RenewBefore int                     `json:"renew_before_days"`
+	Metadata    *Metadata               `json:"metadata,omitempty"`
 }
 
 func List(cfg *config.Config, out io.Writer) error {
@@ -75,7 +75,7 @@ func Revoke(cfg *config.Config, name string, out io.Writer) error {
 		if err := ensureRegistration(client, user, cfg.Account.AcceptTOS); err != nil {
 			return err
 		}
-		leaf, err := os.ReadFile(filepath.Join(cert.OutputDir, "cert.pem"))
+		leaf, err := os.ReadFile(cert.Paths().CertFile)
 		if err != nil {
 			return fmt.Errorf("read certificate for revoke: %w", err)
 		}
@@ -133,11 +133,54 @@ func Providers(out io.Writer) error {
 	return encoder.Encode(dnsprovider.Supported())
 }
 
+type ConfigSummary struct {
+	CertificateCount int      `json:"certificate_count"`
+	Certificates     []string `json:"certificates"`
+}
+
+type CertificatePathInfo struct {
+	Name      string                  `json:"name"`
+	OutputDir string                  `json:"output_dir"`
+	Paths     config.CertificatePaths `json:"paths"`
+}
+
+func Validate(cfg *config.Config, out io.Writer) error {
+	names := make([]string, 0, len(cfg.Certificates))
+	for _, cert := range cfg.Certificates {
+		names = append(names, cert.Name)
+	}
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(ConfigSummary{
+		CertificateCount: len(cfg.Certificates),
+		Certificates:     names,
+	})
+}
+
+func Paths(cfg *config.Config, name string, out io.Writer) error {
+	targets, err := selectCertificates(cfg.Certificates, name)
+	if err != nil {
+		return err
+	}
+	infos := make([]CertificatePathInfo, 0, len(targets))
+	for _, cert := range targets {
+		infos = append(infos, CertificatePathInfo{
+			Name:      cert.Name,
+			OutputDir: cert.OutputDir,
+			Paths:     cert.Paths(),
+		})
+	}
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(infos)
+}
+
 func inspectCertificate(cfg *config.Config, cert config.CertificateSpec) (CertificateInfo, error) {
 	info := CertificateInfo{
 		Name:        cert.Name,
 		Domains:     append([]string(nil), cert.Domains...),
 		OutputDir:   cert.OutputDir,
+		Paths:       cert.Paths(),
 		Provider:    cfg.DNS.Provider,
 		Status:      "missing",
 		RenewBefore: cert.RenewBeforeDays,
@@ -146,7 +189,7 @@ func inspectCertificate(cfg *config.Config, cert config.CertificateSpec) (Certif
 	if err == nil {
 		info.Metadata = metadata
 	}
-	expiry, err := readCertificateExpiry(filepath.Join(cert.OutputDir, "fullchain.pem"))
+	expiry, err := readCertificateExpiry(cert.Paths().FullChainFile)
 	if err != nil {
 		return info, nil
 	}

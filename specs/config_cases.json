@@ -53,5 +53,24 @@
       "post_install_hooks": 1,
       "post_deploy_hooks": 1
     }
+  },
+  {
+    "name": "dns-credentials-derive-env",
+    "env": {},
+    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  provider: volcengine-intl\n  account_mode: global\n  credentials:\n    access_key: ak-test\n    secret_key: sk-test\ncertificates:\n  - name: example\n    domains:\n      - example.com\n",
+    "local_override": "",
+    "expect": {
+      "email": "ops@example.com",
+      "provider": "volcengine-intl",
+      "first_domain": "example.com",
+      "renew_before_days": 30,
+      "challenge": "dns-01",
+      "bundle": true,
+      "env": {
+        "VOLC_ACCESSKEY": "ak-test",
+        "VOLC_SECRETKEY": "sk-test",
+        "VOLC_REGION": "ap-singapore"
+      }
+    }
   }
 ]

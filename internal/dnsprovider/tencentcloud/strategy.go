@@ -11,7 +11,9 @@ type Strategy struct{}
 
 func (Strategy) ID() string { return "tencentcloud" }
 
-func (Strategy) Aliases() []string { return []string{"tencent", "dnspod", "tencent-dns"} }
+func (Strategy) Aliases() []string {
+	return []string{"tencent", "dnspod", "tencent-dns", "tencentcloud-cn", "tencentcloud-intl", "dnspod-intl"}
+}
 
 func (Strategy) NewProvider(_ config.DNSConfig) (challenge.Provider, error) {
 	return tencentprovider.NewDNSProvider()

@@ -11,7 +11,7 @@ type Strategy struct{}
 
 func (Strategy) ID() string { return "cloudflare" }
 
-func (Strategy) Aliases() []string { return []string{"cf"} }
+func (Strategy) Aliases() []string { return []string{"cf", "cloudflare-global", "cloudflare-intl"} }
 
 func (Strategy) NewProvider(_ config.DNSConfig) (challenge.Provider, error) {
 	return cloudflareprovider.NewDNSProvider()

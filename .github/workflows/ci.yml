@@ -1,4 +1,5 @@
 name: ci
+run-name: ci ${{ github.event.inputs.target_os || 'all' }} ${{ github.event.inputs.debug_label || github.ref_name }}
 
 on:
   push:
@@ -7,6 +8,16 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      target_os:
+        description: Runner to validate while debugging from VS Code
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - ubuntu
+          - windows
+          - macos
       skip_integration:
         description: Skip live ACME integration tests while debugging CI
         required: true
@@ -15,21 +26,65 @@ on:
         options:
           - 'true'
           - 'false'
+      debug_label:
+        description: Optional label shown in the workflow run name for repeated validation
+        required: false
+        default: vscode-debug
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+
+    steps:
+      - name: Select runner matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ github.event.inputs.target_os || 'all' }}"
+          case "$target" in
+            ubuntu)
+              matrix='{"include":[{"os":"ubuntu-latest","os_key":"ubuntu"}]}'
+              ;;
+            windows)
+              matrix='{"include":[{"os":"windows-latest","os_key":"windows"}]}'
+              ;;
+            macos)
+              matrix='{"include":[{"os":"macos-latest","os_key":"macos"}]}'
+              ;;
+            all)
+              matrix='{"include":[{"os":"ubuntu-latest","os_key":"ubuntu"},{"os":"windows-latest","os_key":"windows"},{"os":"macos-latest","os_key":"macos"}]}'
+              ;;
+            *)
+              echo "Unsupported target_os: $target" >&2
+              exit 1
+              ;;
+          esac
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "$matrix"
+
   test:
+    needs: plan
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-latest
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Show debug context
+        shell: bash
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "runner=${{ runner.os }}"
+          echo "target_os=${{ github.event.inputs.target_os || 'all' }}"
+          echo "skip_integration=${{ github.event.inputs.skip_integration || 'true' }}"
+          echo "debug_label=${{ github.event.inputs.debug_label || '' }}"
+          echo "sha=${{ github.sha }}"
 
       - name: Setup Go
         uses: actions/setup-go@v5

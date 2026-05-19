@@ -31,10 +31,30 @@ type AccountConfig struct {
 
 type DNSConfig struct {
 	Provider                   string            `yaml:"provider" json:"provider"`
+	AccountMode                string            `yaml:"account_mode" json:"account_mode"`
+	Region                     string            `yaml:"region" json:"region"`
+	Credentials                DNSCredentials    `yaml:"credentials" json:"credentials"`
 	Env                        map[string]string `yaml:"env" json:"env"`
 	DisableCNAMESupport        bool              `yaml:"disable_cname_support" json:"disable_cname_support"`
 	DisableCompletePropagation bool              `yaml:"disable_complete_propagation" json:"disable_complete_propagation"`
 	RecursiveNameservers       []string          `yaml:"recursive_nameservers" json:"recursive_nameservers"`
+}
+
+type DNSCredentials struct {
+	AccessKey          string `yaml:"access_key" json:"access_key"`
+	SecretKey          string `yaml:"secret_key" json:"secret_key"`
+	SecretID           string `yaml:"secret_id" json:"secret_id"`
+	SecretToken        string `yaml:"secret_token" json:"secret_token"`
+	APIToken           string `yaml:"api_token" json:"api_token"`
+	APIKey             string `yaml:"api_key" json:"api_key"`
+	APIEmail           string `yaml:"api_email" json:"api_email"`
+	ProjectID          string `yaml:"project_id" json:"project_id"`
+	ServiceAccountFile string `yaml:"service_account_file" json:"service_account_file"`
+	SubscriptionID     string `yaml:"subscription_id" json:"subscription_id"`
+	TenantID           string `yaml:"tenant_id" json:"tenant_id"`
+	ClientID           string `yaml:"client_id" json:"client_id"`
+	ClientSecret       string `yaml:"client_secret" json:"client_secret"`
+	ResourceGroup      string `yaml:"resource_group" json:"resource_group"`
 }
 
 type CertificateSpec struct {
@@ -69,12 +89,12 @@ type CertificateFiles struct {
 }
 
 type CertificatePaths struct {
-	CertFile      string
-	KeyFile       string
-	PublicKeyFile string
-	FullChainFile string
-	ChainFile     string
-	MetadataFile  string
+	CertFile      string `json:"cert_file"`
+	KeyFile       string `json:"key_file"`
+	PublicKeyFile string `json:"public_key_file"`
+	FullChainFile string `json:"fullchain_file"`
+	ChainFile     string `json:"chain_file"`
+	MetadataFile  string `json:"metadata_file"`
 }
 
 func (c CertificateSpec) Paths() CertificatePaths {
@@ -197,6 +217,13 @@ func (c *Config) merge(override Config) {
 	if override.DNS.Provider != "" {
 		c.DNS.Provider = override.DNS.Provider
 	}
+	if override.DNS.AccountMode != "" {
+		c.DNS.AccountMode = override.DNS.AccountMode
+	}
+	if override.DNS.Region != "" {
+		c.DNS.Region = override.DNS.Region
+	}
+	mergeDNSCredentials(&c.DNS.Credentials, override.DNS.Credentials)
 	if override.DNS.DisableCNAMESupport {
 		c.DNS.DisableCNAMESupport = true
 	}
@@ -290,6 +317,14 @@ func (c *Config) applyDefaults(configPath string) error {
 	if c.DNS.Env == nil {
 		c.DNS.Env = map[string]string{}
 	}
+	c.DNS.Provider = strings.TrimSpace(c.DNS.Provider)
+	c.DNS.AccountMode = normalizeAccountMode(c.DNS.AccountMode)
+	c.DNS.Region = strings.TrimSpace(c.DNS.Region)
+	for key, value := range deriveDNSEnv(c.DNS) {
+		if _, exists := c.DNS.Env[key]; !exists {
+			c.DNS.Env[key] = value
+		}
+	}
 	for idx := range c.Certificates {
 		cert := &c.Certificates[idx]
 		if cert.Name == "" && len(cert.Domains) > 0 {
@@ -338,6 +373,13 @@ func (c *Config) Validate() error {
 	}
 	if c.DNS.Provider == "" {
 		return fmt.Errorf("dns.provider is required")
+	}
+	if c.DNS.AccountMode != "" {
+		switch c.DNS.AccountMode {
+		case "cn", "intl", "global":
+		default:
+			return fmt.Errorf("dns.account_mode must be one of cn, intl, global")
+		}
 	}
 	if len(c.Certificates) == 0 {
 		return fmt.Errorf("at least one certificate entry is required")
@@ -424,6 +466,152 @@ func mergeInstallConfig(base *InstallConfig, incoming InstallConfig) {
 	if incoming.MetadataFile != "" {
 		base.MetadataFile = incoming.MetadataFile
 	}
+}
+
+func mergeDNSCredentials(base *DNSCredentials, incoming DNSCredentials) {
+	if incoming.AccessKey != "" {
+		base.AccessKey = incoming.AccessKey
+	}
+	if incoming.SecretKey != "" {
+		base.SecretKey = incoming.SecretKey
+	}
+	if incoming.SecretID != "" {
+		base.SecretID = incoming.SecretID
+	}
+	if incoming.SecretToken != "" {
+		base.SecretToken = incoming.SecretToken
+	}
+	if incoming.APIToken != "" {
+		base.APIToken = incoming.APIToken
+	}
+	if incoming.APIKey != "" {
+		base.APIKey = incoming.APIKey
+	}
+	if incoming.APIEmail != "" {
+		base.APIEmail = incoming.APIEmail
+	}
+	if incoming.ProjectID != "" {
+		base.ProjectID = incoming.ProjectID
+	}
+	if incoming.ServiceAccountFile != "" {
+		base.ServiceAccountFile = incoming.ServiceAccountFile
+	}
+	if incoming.SubscriptionID != "" {
+		base.SubscriptionID = incoming.SubscriptionID
+	}
+	if incoming.TenantID != "" {
+		base.TenantID = incoming.TenantID
+	}
+	if incoming.ClientID != "" {
+		base.ClientID = incoming.ClientID
+	}
+	if incoming.ClientSecret != "" {
+		base.ClientSecret = incoming.ClientSecret
+	}
+	if incoming.ResourceGroup != "" {
+		base.ResourceGroup = incoming.ResourceGroup
+	}
+}
+
+func deriveDNSEnv(cfg DNSConfig) map[string]string {
+	values := map[string]string{}
+	provider := detectProviderFamily(cfg.Provider)
+	mode := normalizeAccountMode(cfg.AccountMode)
+	set := func(key, value string) {
+		if strings.TrimSpace(value) == "" {
+			return
+		}
+		values[key] = value
+	}
+
+	switch provider {
+	case "alicloud":
+		set("ALICLOUD_ACCESS_KEY", cfg.Credentials.AccessKey)
+		set("ALICLOUD_SECRET_KEY", cfg.Credentials.SecretKey)
+	case "volcengine":
+		set("VOLC_ACCESSKEY", cfg.Credentials.AccessKey)
+		set("VOLC_SECRETKEY", cfg.Credentials.SecretKey)
+		if cfg.Region != "" {
+			set("VOLC_REGION", cfg.Region)
+		} else if mode == "intl" || mode == "global" {
+			set("VOLC_REGION", "ap-singapore")
+		} else if mode == "cn" {
+			set("VOLC_REGION", "cn-beijing")
+		}
+	case "tencentcloud":
+		set("TENCENTCLOUD_SECRET_ID", firstNonEmpty(cfg.Credentials.SecretID, cfg.Credentials.AccessKey))
+		set("TENCENTCLOUD_SECRET_KEY", cfg.Credentials.SecretKey)
+		set("TENCENTCLOUD_SESSION_TOKEN", cfg.Credentials.SecretToken)
+	case "cloudflare":
+		set("CLOUDFLARE_DNS_API_TOKEN", firstNonEmpty(cfg.Credentials.APIToken, cfg.Credentials.APIKey))
+		set("CLOUDFLARE_EMAIL", cfg.Credentials.APIEmail)
+	case "aws":
+		set("AWS_ACCESS_KEY_ID", firstNonEmpty(cfg.Credentials.AccessKey, cfg.Credentials.SecretID))
+		set("AWS_SECRET_ACCESS_KEY", cfg.Credentials.SecretKey)
+		set("AWS_SESSION_TOKEN", cfg.Credentials.SecretToken)
+		set("AWS_REGION", firstNonEmpty(cfg.Region, defaultAWSRegion(mode)))
+	case "gcloud":
+		set("GCE_PROJECT", cfg.Credentials.ProjectID)
+		set("GOOGLE_APPLICATION_CREDENTIALS", cfg.Credentials.ServiceAccountFile)
+	case "azure":
+		set("AZURE_SUBSCRIPTION_ID", cfg.Credentials.SubscriptionID)
+		set("AZURE_TENANT_ID", cfg.Credentials.TenantID)
+		set("AZURE_CLIENT_ID", cfg.Credentials.ClientID)
+		set("AZURE_CLIENT_SECRET", cfg.Credentials.ClientSecret)
+		set("AZURE_RESOURCE_GROUP", cfg.Credentials.ResourceGroup)
+	}
+
+	return values
+}
+
+func detectProviderFamily(provider string) string {
+	normalized := strings.NewReplacer("-", "", "_", "", " ", "").Replace(strings.ToLower(strings.TrimSpace(provider)))
+	switch normalized {
+	case "alicloud", "aliyun", "alidns", "alibaba", "alicloudcn", "alicloudintl", "alicloudglobal", "aliyunintl", "alibabacloud":
+		return "alicloud"
+	case "aws", "route53", "amazon", "amazonwebservices", "awsglobal", "awsintl":
+		return "aws"
+	case "azure", "azuredns", "azurednsglobal", "azurednsintl":
+		return "azure"
+	case "cloudflare", "cf", "cloudflareglobal":
+		return "cloudflare"
+	case "gcloud", "gcp", "googlecloud", "googlecloudglobal", "google":
+		return "gcloud"
+	case "tencentcloud", "tencent", "dnspod", "tencentdns", "tencentcloudcn", "tencentcloudintl", "dnspodintl":
+		return "tencentcloud"
+	case "volcengine", "volc", "volcdns", "volcanicengine", "volcenginecn", "volcengineintl", "volcengineglobal":
+		return "volcengine"
+	default:
+		return normalized
+	}
+}
+
+func normalizeAccountMode(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	switch normalized {
+	case "international", "overseas":
+		return "intl"
+	case "domestic", "mainland", "china":
+		return "cn"
+	default:
+		return normalized
+	}
+}
+
+func defaultAWSRegion(mode string) string {
+	if mode == "cn" {
+		return "cn-north-1"
+	}
+	return "us-east-1"
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func mergeHooks(base *HookConfig, incoming HookConfig) {

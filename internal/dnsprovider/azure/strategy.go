@@ -11,7 +11,9 @@ type Strategy struct{}
 
 func (Strategy) ID() string { return "azure" }
 
-func (Strategy) Aliases() []string { return []string{"azuredns", "azure-dns"} }
+func (Strategy) Aliases() []string {
+	return []string{"azuredns", "azure-dns", "azure-intl", "azure-global"}
+}
 
 func (Strategy) NewProvider(_ config.DNSConfig) (challenge.Provider, error) {
 	return azuredns.NewDNSProvider()

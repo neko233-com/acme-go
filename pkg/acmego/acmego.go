@@ -5,6 +5,8 @@ import (
 
 	"github.com/neko233-com/acme-go/internal/acme"
 	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme-go/internal/doc"
+	"github.com/neko233-com/acme-go/internal/update"
 )
 
 type Config = config.Config
@@ -28,6 +30,10 @@ const (
 type Options = acme.Options
 type Result = acme.Result
 type Metadata = acme.Metadata
+type ConfigSummary = acme.ConfigSummary
+type CertificatePathInfo = acme.CertificatePathInfo
+type ReleaseDiff = update.ReleaseDiff
+type VersionInfo = update.VersionInfo
 
 func Load(path string) (*Config, error) {
 	return config.Load(path)
@@ -35,6 +41,14 @@ func Load(path string) (*Config, error) {
 
 func Plan(cfg *Config, name string, out io.Writer) error {
 	return acme.Plan(cfg, name, out)
+}
+
+func Validate(cfg *Config, out io.Writer) error {
+	return acme.Validate(cfg, out)
+}
+
+func Paths(cfg *Config, name string, out io.Writer) error {
+	return acme.Paths(cfg, name, out)
 }
 
 func Run(cfg *Config, options Options) (Result, error) {
@@ -71,4 +85,24 @@ func Deploy(cfg *Config, name string, out io.Writer) error {
 
 func Providers(out io.Writer) error {
 	return acme.Providers(out)
+}
+
+func CheckVersion(currentVersion string) (VersionInfo, error) {
+	return update.CheckVersion(currentVersion)
+}
+
+func Upgrade(currentVersion, executablePath string, out io.Writer) error {
+	return update.Upgrade(currentVersion, executablePath, out)
+}
+
+func MaybeAutoUpdate(currentVersion, executablePath string, out io.Writer) error {
+	return update.MaybeAutoUpdate(currentVersion, executablePath, out)
+}
+
+func ResolveGuidePath(workingDir, executablePath string) (string, error) {
+	return doc.ResolveGuidePath(workingDir, executablePath)
+}
+
+func OpenGuide(workingDir, executablePath string) (string, error) {
+	return doc.OpenGuide(workingDir, executablePath)
 }
