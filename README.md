@@ -42,6 +42,7 @@ It currently focuses on the most common operational surface used in real deploym
 - Lifecycle commands for `help`, `doc`, `validate`, `paths`, `plan`, `issue`, `renew`, `revoke`, `list`, `info`, `install-cert`, `deploy`, `version`, and `upgrade`.
 - Config merge with `.local.json` override so secrets stay out of Git.
 - Low-config DNS credentials mapping: use `dns.credentials` for common vendors and let acme-go derive vendor env vars.
+- Batch-friendly DNS model: declare multiple named providers once under `dns_providers`, then select them per certificate.
 - Domestic and international provider aliases such as `alicloud-cn`, `alicloud-intl`, `volcengine-cn`, `volcengine-intl`, `tencentcloud-cn`, and `tencentcloud-intl`.
 - Config-driven install, deploy, and hook pipeline.
 - Automatic self-update checks are enabled by default for operational commands, with a local cooldown cache to avoid repeated GitHub checks.
@@ -54,6 +55,7 @@ It currently focuses on the most common operational surface used in real deploym
 - 支持 `help`、`doc`、`validate`、`paths`、`plan`、`issue`、`renew`、`revoke`、`list`、`info`、`install-cert`、`deploy`、`version`、`upgrade` 等生命周期命令。
 - 支持 `.local.json` 覆盖配置，便于将敏感信息与 Git 隔离。
 - 支持低配置 DNS 凭据模型，优先填写 `dns.credentials`，由 acme-go 自动映射到各厂商需要的环境变量。
+- 支持批量证书场景：可在 `dns_providers` 中集中声明多组 DNS provider，再按证书选择使用哪一组。
 - 支持国内版/国际版 DNS 厂商别名，例如 `alicloud-cn`、`alicloud-intl`、`volcengine-cn`、`volcengine-intl`、`tencentcloud-cn`、`tencentcloud-intl`。
 - 支持配置驱动的 install、deploy、hook 流程。
 - 默认对常用操作命令开启自动自升级检查，并带有本地冷却缓存，避免频繁请求 GitHub。
@@ -114,16 +116,19 @@ func RenewNginxCertificate() error {
       KeyPath:   "/var/lib/nginx-gui/acme/account.pem",
       AcceptTOS: true,
     },
-    DNS: acmego.DNSConfig{
-      Provider: "cloudflare",
-      Env: map[string]string{
-        "CLOUDFLARE_DNS_API_TOKEN": "token-from-your-secret-store",
+    DNSProviders: map[string]acmego.DNSConfig{
+      "edge-global": {
+        Provider: "cloudflare",
+        Env: map[string]string{
+          "CLOUDFLARE_DNS_API_TOKEN": "token-from-your-secret-store",
+        },
       },
     },
     Certificates: []acmego.CertificateSpec{
       {
         Name:      "site-a",
         Domains:   []string{"example.com", "*.example.com"},
+        DNS:       acmego.DNSConfig{ProviderRef: "edge-global"},
         OutputDir: "/etc/nginx/ssl/site-a",
         OutputFiles: acmego.CertificateFiles{
           FullChainFile: "server.crt",
@@ -145,9 +150,9 @@ func RenewNginxCertificate() error {
 }
 ```
 
-`OutputDir` controls the directory. `OutputFiles` controls generated file names. Relative file names are resolved under `OutputDir`; absolute file paths are also accepted. Suggested nginx names are `server.crt` for fullchain, `server.key` for the private key, `server.pub` for the public key, `leaf.crt` for the leaf certificate, `ca.crt` for the issuer chain, and `acme.json` for renewal metadata.
+`DNSProviders` lets one process batch-manage certificates backed by different vendors or different regional accounts. `OutputDir` controls the directory. `OutputFiles` controls generated file names. Relative file names are resolved under `OutputDir`; absolute file paths are also accepted. Suggested nginx names are `server.crt` for fullchain, `server.key` for the private key, `server.pub` for the public key, `leaf.crt` for the leaf certificate, `ca.crt` for the issuer chain, and `acme.json` for renewal metadata.
 
-`OutputDir` 用于指定目录，`OutputFiles` 用于指定生成文件名。相对路径会放在 `OutputDir` 下，绝对路径也可以直接使用。nginx GUI 场景建议用 `server.crt` 存 fullchain，`server.key` 存私钥，`server.pub` 存公钥，`leaf.crt` 存叶子证书，`ca.crt` 存签发链，`acme.json` 存续期元数据。
+`DNSProviders` 让一个进程可以批量管理由不同厂商或不同地域账号托管的证书。`OutputDir` 用于指定目录，`OutputFiles` 用于指定生成文件名。相对路径会放在 `OutputDir` 下，绝对路径也可以直接使用。nginx GUI 场景建议用 `server.crt` 存 fullchain，`server.key` 存私钥，`server.pub` 存公钥，`leaf.crt` 存叶子证书，`ca.crt` 存签发链，`acme.json` 存续期元数据。
 
 ## Commands | 命令说明
 
@@ -213,9 +218,9 @@ go run . upgrade
 
 ## Configuration | 配置模型
 
-Example:
+Example with shared defaults plus named providers:
 
-示例：
+示例（全局默认值 + 多个命名 provider）：
 
 ```yaml
 ca:
@@ -227,19 +232,26 @@ account:
   accept_tos: true
 
 dns:
-  provider: alicloud-cn
-  account_mode: cn
-  credentials:
-    access_key: ${ALICLOUD_ACCESS_KEY}
-    secret_key: ${ALICLOUD_SECRET_KEY}
   env: {}
   disable_cname_support: false
   disable_complete_propagation: false
   recursive_nameservers: []
 
-For common vendors, prefer `dns.credentials` over manually writing `dns.env`. acme-go derives the provider env vars for AliCloud, Volcengine, Tencent Cloud, Cloudflare, AWS, Google Cloud, Azure, DigitalOcean, Hetzner, Huawei Cloud, IBM Cloud, Linode, Oracle Cloud, Scaleway, UCloud, Baidu Cloud, and Vultr. `dns.env` still works and overrides the derived values when you need vendor-specific tuning.
+dns_providers:
+  aliyun-cn:
+    provider: alicloud-cn
+    account_mode: cn
+    credentials:
+      access_key: ${ALICLOUD_ACCESS_KEY}
+      secret_key: ${ALICLOUD_SECRET_KEY}
+  cloudflare-global:
+    provider: cloudflare
+    credentials:
+      api_token: ${CLOUDFLARE_DNS_API_TOKEN}
 
-常见厂商建议优先填写 `dns.credentials`，不要手写 `dns.env`。acme-go 会自动为阿里云、火山引擎、腾讯云、Cloudflare、AWS、Google Cloud、Azure、DigitalOcean、Hetzner、华为云、IBM Cloud、Linode、Oracle Cloud、UCloud、百度云、Scaleway、Vultr 推导所需环境变量。若你需要厂商特定参数，`dns.env` 仍然可用，且优先级更高。
+For common vendors, prefer `dns.credentials` over manually writing `dns.env`. acme-go derives the provider env vars for AliCloud, Volcengine, Tencent Cloud, Cloudflare, AWS, Google Cloud, Azure, DigitalOcean, Hetzner, Huawei Cloud, IBM Cloud, Linode, Oracle Cloud, Scaleway, UCloud, Baidu Cloud, and Vultr. `dns.env` still works and overrides the derived values when you need vendor-specific tuning. Use top-level `dns` for shared defaults, `dns_providers` for named reusable accounts, and `certificates[].dns.provider_ref` to pick one provider per certificate.
+
+常见厂商建议优先填写 `dns.credentials`，不要手写 `dns.env`。acme-go 会自动为阿里云、火山引擎、腾讯云、Cloudflare、AWS、Google Cloud、Azure、DigitalOcean、Hetzner、华为云、IBM Cloud、Linode、Oracle Cloud、UCloud、百度云、Scaleway、Vultr 推导所需环境变量。若你需要厂商特定参数，`dns.env` 仍然可用，且优先级更高。建议将共享默认值放在顶层 `dns`，将可复用账号放在 `dns_providers`，再通过 `certificates[].dns.provider_ref` 为每张证书选择 provider。
 
 If you operate multiple regional accounts, use provider aliases such as `alicloud-cn`, `alicloud-intl`, `volcengine-cn`, `volcengine-intl`, `tencentcloud-cn`, or `tencentcloud-intl`. You can also set `dns.account_mode` to `cn`, `intl`, or `global`; for example, Volcengine defaults to `cn-beijing` for `cn` and `ap-singapore` for `intl/global` when no explicit `dns.region` is set.
 
@@ -250,6 +262,8 @@ certificates:
     domains:
       - example.com
       - '*.example.com'
+    dns:
+      provider_ref: aliyun-cn
     output_dir: certs/example-prod
     output_files:
       # Leaf certificate. Suggested names: cert.pem, tls.crt, server.crt.

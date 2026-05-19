@@ -51,7 +51,11 @@ func TestRunSuccessActionsRunsInstallDeployAndHooks(t *testing.T) {
 		},
 	}
 
-	if err := runSuccessActions(cfg, cert, ModeIssue, &out); err != nil {
+	runtime, err := resolveCertificateRuntime(cfg, cert)
+	if err != nil {
+		t.Fatalf("resolveCertificateRuntime: %v", err)
+	}
+	if err := runSuccessActions(runtime, ModeIssue, &out); err != nil {
 		t.Fatalf("runSuccessActions: %v", err)
 	}
 
@@ -83,7 +87,11 @@ func TestRunPreHooksUsesRenewCommands(t *testing.T) {
 		},
 	}
 
-	if err := runPreHooks(cert, ModeRenew, newDeployContext(&config.Config{}, cert), &out); err != nil {
+	runtime, err := resolveCertificateRuntime(&config.Config{CA: config.CAConfig{DirectoryURL: "https://example.com/directory"}}, cert)
+	if err != nil {
+		t.Fatalf("resolveCertificateRuntime: %v", err)
+	}
+	if err := runPreHooks(cert, ModeRenew, runtime.deployContext, &out); err != nil {
 		t.Fatalf("runPreHooks: %v", err)
 	}
 	if !strings.Contains(out.String(), "PRERENEW:") || !strings.Contains(out.String(), "renew-example") {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/neko233-com/acme-go/internal/config"
 	"github.com/neko233-com/acme-go/internal/deploy"
@@ -19,64 +18,42 @@ func runPreHooks(cert config.CertificateSpec, mode Mode, ctx deploy.Context, out
 	return hook.Run(commands, deployEnv(ctx), out)
 }
 
-func runSuccessActions(cfg *config.Config, cert config.CertificateSpec, mode Mode, out io.Writer) error {
-	ctx := newDeployContext(cfg, cert)
-	if err := deploy.Install(cert.Install, ctx); err != nil {
+func runSuccessActions(runtime certificateRuntime, mode Mode, out io.Writer) error {
+	if err := deploy.Install(runtime.cert.Install, runtime.deployContext); err != nil {
 		return err
 	}
-	if err := hook.Run(cert.Hooks.PostInstall, deployEnv(ctx), out); err != nil {
+	if err := hook.Run(runtime.cert.Hooks.PostInstall, deployEnv(runtime.deployContext), out); err != nil {
 		return err
 	}
-	if err := deploy.RunTargets(cert.Deploy, ctx, out); err != nil {
+	if err := deploy.RunTargets(runtime.cert.Deploy, runtime.deployContext, out); err != nil {
 		return err
 	}
-	if err := hook.Run(cert.Hooks.PostDeploy, deployEnv(ctx), out); err != nil {
+	if err := hook.Run(runtime.cert.Hooks.PostDeploy, deployEnv(runtime.deployContext), out); err != nil {
 		return err
 	}
-	commands := cert.Hooks.PostIssue
+	commands := runtime.cert.Hooks.PostIssue
 	if mode == ModeRenew {
-		commands = cert.Hooks.PostRenew
+		commands = runtime.cert.Hooks.PostRenew
 	}
-	return hook.Run(commands, deployEnv(ctx), out)
+	return hook.Run(commands, deployEnv(runtime.deployContext), out)
 }
 
-func runRevokeHooks(cfg *config.Config, cert config.CertificateSpec, out io.Writer) error {
-	return hook.Run(cert.Hooks.PostRevoke, deployEnv(newDeployContext(cfg, cert)), out)
+func runRevokeHooks(runtime certificateRuntime, out io.Writer) error {
+	return hook.Run(runtime.cert.Hooks.PostRevoke, deployEnv(runtime.deployContext), out)
 }
 
-func installExisting(cfg *config.Config, cert config.CertificateSpec, out io.Writer) error {
-	ctx := newDeployContext(cfg, cert)
-	if err := deploy.Install(cert.Install, ctx); err != nil {
+func installExisting(runtime certificateRuntime, out io.Writer) error {
+	if err := deploy.Install(runtime.cert.Install, runtime.deployContext); err != nil {
 		return err
 	}
-	return hook.Run(cert.Hooks.PostInstall, deployEnv(ctx), out)
+	return hook.Run(runtime.cert.Hooks.PostInstall, deployEnv(runtime.deployContext), out)
 }
 
-func deployExisting(cfg *config.Config, cert config.CertificateSpec, out io.Writer) error {
-	ctx := newDeployContext(cfg, cert)
-	if err := deploy.RunTargets(cert.Deploy, ctx, out); err != nil {
+func deployExisting(runtime certificateRuntime, out io.Writer) error {
+	if err := deploy.RunTargets(runtime.cert.Deploy, runtime.deployContext, out); err != nil {
 		return err
 	}
-	return hook.Run(cert.Hooks.PostDeploy, deployEnv(ctx), out)
-}
-
-func newDeployContext(cfg *config.Config, cert config.CertificateSpec) deploy.Context {
-	paths := cert.Paths()
-	return deploy.Context{
-		Name:         cert.Name,
-		OutputDir:    cert.OutputDir,
-		CertFile:     paths.CertFile,
-		KeyFile:      paths.KeyFile,
-		PublicKey:    paths.PublicKeyFile,
-		FullChain:    paths.FullChainFile,
-		ChainFile:    paths.ChainFile,
-		MetadataFile: paths.MetadataFile,
-		Provider:     cfg.DNS.Provider,
-		Challenge:    cert.Challenge,
-		Domain:       cert.Domains[0],
-		DomainsCSV:   strings.Join(cert.Domains, ","),
-		DirectoryURL: cfg.CA.DirectoryURL,
-	}
+	return hook.Run(runtime.cert.Hooks.PostDeploy, deployEnv(runtime.deployContext), out)
 }
 
 func deployEnv(ctx deploy.Context) map[string]string {

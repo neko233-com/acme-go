@@ -69,7 +69,11 @@ func TestWriteCertificateUsesConfiguredOutputFiles(t *testing.T) {
 		PrivateKey:        []byte("-----BEGIN PRIVATE KEY-----\nprivate\n-----END PRIVATE KEY-----\n"),
 	}
 
-	if err := writeCertificate(cert, cfg, resource); err != nil {
+	runtime := certificateRuntime{
+		cert: cert,
+		dns:  config.DNSConfig{Provider: "cloudflare"},
+	}
+	if err := writeCertificate(runtime, cfg, resource); err != nil {
 		t.Fatalf("writeCertificate: %v", err)
 	}
 

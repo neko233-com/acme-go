@@ -12,11 +12,19 @@ import (
 
 const defaultCADirectoryURL = "https://acme-v02.api.letsencrypt.org/directory"
 
+// Config keeps the declarative surface stable while allowing the runtime to
+// flatten it into per-certificate execution state.
+//
+// Layering order for DNS settings is:
+// 1. top-level dns shared defaults
+// 2. dns_providers[name] reusable provider/account blocks
+// 3. certificates[].dns final per-certificate override
 type Config struct {
-	CA           CAConfig          `yaml:"ca" json:"ca"`
-	Account      AccountConfig     `yaml:"account" json:"account"`
-	DNS          DNSConfig         `yaml:"dns" json:"dns"`
-	Certificates []CertificateSpec `yaml:"certificates" json:"certificates"`
+	CA           CAConfig             `yaml:"ca" json:"ca"`
+	Account      AccountConfig        `yaml:"account" json:"account"`
+	DNS          DNSConfig            `yaml:"dns" json:"dns"`
+	DNSProviders map[string]DNSConfig `yaml:"dns_providers" json:"dns_providers"`
+	Certificates []CertificateSpec    `yaml:"certificates" json:"certificates"`
 }
 
 type CAConfig struct {
@@ -30,6 +38,10 @@ type AccountConfig struct {
 }
 
 type DNSConfig struct {
+	// ProviderRef selects a named entry from Config.DNSProviders.
+	// It is primarily meant for certificates so a batch config can reuse one
+	// provider definition across many certificate entries.
+	ProviderRef                string            `yaml:"provider_ref" json:"provider_ref"`
 	Provider                   string            `yaml:"provider" json:"provider"`
 	AccountMode                string            `yaml:"account_mode" json:"account_mode"`
 	Region                     string            `yaml:"region" json:"region"`
@@ -65,8 +77,11 @@ type DNSCredentials struct {
 }
 
 type CertificateSpec struct {
-	Name            string           `yaml:"name" json:"name"`
-	Domains         []string         `yaml:"domains" json:"domains"`
+	Name    string   `yaml:"name" json:"name"`
+	Domains []string `yaml:"domains" json:"domains"`
+	// DNS allows a certificate to pick a named provider or override parts of it
+	// without duplicating the rest of the provider definition.
+	DNS             DNSConfig        `yaml:"dns" json:"dns"`
 	OutputDir       string           `yaml:"output_dir" json:"output_dir"`
 	OutputFiles     CertificateFiles `yaml:"output_files" json:"output_files"`
 	KeyType         string           `yaml:"key_type" json:"key_type"`
@@ -221,30 +236,16 @@ func (c *Config) merge(override Config) {
 	if override.Account.AcceptTOS {
 		c.Account.AcceptTOS = true
 	}
-	if override.DNS.Provider != "" {
-		c.DNS.Provider = override.DNS.Provider
-	}
-	if override.DNS.AccountMode != "" {
-		c.DNS.AccountMode = override.DNS.AccountMode
-	}
-	if override.DNS.Region != "" {
-		c.DNS.Region = override.DNS.Region
-	}
-	mergeDNSCredentials(&c.DNS.Credentials, override.DNS.Credentials)
-	if override.DNS.DisableCNAMESupport {
-		c.DNS.DisableCNAMESupport = true
-	}
-	if override.DNS.DisableCompletePropagation {
-		c.DNS.DisableCompletePropagation = true
-	}
-	if len(override.DNS.RecursiveNameservers) > 0 {
-		c.DNS.RecursiveNameservers = append([]string(nil), override.DNS.RecursiveNameservers...)
-	}
-	if c.DNS.Env == nil {
-		c.DNS.Env = map[string]string{}
-	}
-	for key, value := range override.DNS.Env {
-		c.DNS.Env[key] = value
+	mergeDNSConfig(&c.DNS, override.DNS)
+	if len(override.DNSProviders) > 0 {
+		if c.DNSProviders == nil {
+			c.DNSProviders = map[string]DNSConfig{}
+		}
+		for name, incoming := range override.DNSProviders {
+			merged := c.DNSProviders[name]
+			mergeDNSConfig(&merged, incoming)
+			c.DNSProviders[name] = merged
+		}
 	}
 	if len(override.Certificates) == 0 {
 		return
@@ -264,6 +265,7 @@ func (c *Config) merge(override Config) {
 		if len(incoming.Domains) > 0 {
 			merged.Domains = append([]string(nil), incoming.Domains...)
 		}
+		mergeDNSConfig(&merged.DNS, incoming.DNS)
 		if incoming.OutputDir != "" {
 			merged.OutputDir = incoming.OutputDir
 		}
@@ -324,19 +326,17 @@ func (c *Config) applyDefaults(configPath string) error {
 	if c.DNS.Env == nil {
 		c.DNS.Env = map[string]string{}
 	}
-	c.DNS.Provider = strings.TrimSpace(c.DNS.Provider)
-	c.DNS.AccountMode = normalizeAccountMode(c.DNS.AccountMode)
-	c.DNS.Region = strings.TrimSpace(c.DNS.Region)
-	for key, value := range deriveDNSEnv(c.DNS) {
-		if _, exists := c.DNS.Env[key]; !exists {
-			c.DNS.Env[key] = value
-		}
+	normalizeDNSConfig(&c.DNS)
+	for name, dnsConfig := range c.DNSProviders {
+		normalizeDNSConfig(&dnsConfig)
+		c.DNSProviders[name] = dnsConfig
 	}
 	for idx := range c.Certificates {
 		cert := &c.Certificates[idx]
 		if cert.Name == "" && len(cert.Domains) > 0 {
 			cert.Name = cert.Domains[0]
 		}
+		normalizeDNSConfig(&cert.DNS)
 		if cert.OutputDir == "" {
 			cert.OutputDir = filepath.Join(baseDir, "certs", cert.Name)
 		}
@@ -378,14 +378,12 @@ func (c *Config) Validate() error {
 	if !c.Account.AcceptTOS {
 		return fmt.Errorf("account.accept_tos must be true")
 	}
-	if c.DNS.Provider == "" {
-		return fmt.Errorf("dns.provider is required")
+	if err := validateDNSConfig("dns", c.DNS, false); err != nil {
+		return err
 	}
-	if c.DNS.AccountMode != "" {
-		switch c.DNS.AccountMode {
-		case "cn", "intl", "global":
-		default:
-			return fmt.Errorf("dns.account_mode must be one of cn, intl, global")
+	for name, dnsConfig := range c.DNSProviders {
+		if err := validateDNSConfig(fmt.Sprintf("dns_providers.%s", name), dnsConfig, dnsConfig.ProviderRef == ""); err != nil {
+			return err
 		}
 	}
 	if len(c.Certificates) == 0 {
@@ -411,6 +409,18 @@ func (c *Config) Validate() error {
 		if cert.Challenge == "webroot" && cert.WebrootPath == "" {
 			return fmt.Errorf("certificate %q requires webroot_path for webroot challenge", cert.Name)
 		}
+		if err := validateDNSConfig(fmt.Sprintf("certificate %q dns", cert.Name), cert.DNS, false); err != nil {
+			return err
+		}
+		if cert.Challenge == "dns-01" {
+			effectiveDNS, err := c.EffectiveDNS(cert)
+			if err != nil {
+				return err
+			}
+			if effectiveDNS.Provider == "" {
+				return fmt.Errorf("certificate %q requires a dns provider; set dns.provider, dns_providers.<name>, or certificates[].dns", cert.Name)
+			}
+		}
 		if cert.Challenge == "tls-alpn-01" && len(cert.Domains) > 1 {
 			for _, domain := range cert.Domains {
 				if strings.HasPrefix(domain, "*.") {
@@ -431,6 +441,23 @@ func (c *Config) Validate() error {
 		}
 	}
 	return nil
+}
+
+// EffectiveDNS resolves the final provider configuration for one certificate.
+// The returned config is ready for runtime consumption and env derivation.
+func (c Config) EffectiveDNS(cert CertificateSpec) (DNSConfig, error) {
+	effective := c.DNS
+	if cert.DNS.ProviderRef != "" {
+		providerConfig, exists := c.DNSProviders[cert.DNS.ProviderRef]
+		if !exists {
+			return DNSConfig{}, fmt.Errorf("certificate %q references unknown dns provider %q", cert.Name, cert.DNS.ProviderRef)
+		}
+		mergeDNSConfig(&effective, providerConfig)
+	}
+	mergeDNSConfig(&effective, cert.DNS)
+	effective.ProviderRef = ""
+	normalizeDNSConfig(&effective)
+	return effective, nil
 }
 
 func mergeCertificateFiles(base *CertificateFiles, incoming CertificateFiles) {
@@ -541,6 +568,75 @@ func mergeDNSCredentials(base *DNSCredentials, incoming DNSCredentials) {
 	}
 }
 
+// mergeDNSConfig applies non-zero fields from incoming onto base so top-level
+// defaults, named providers, and certificate overrides can share one merge
+// model.
+func mergeDNSConfig(base *DNSConfig, incoming DNSConfig) {
+	if incoming.ProviderRef != "" {
+		base.ProviderRef = incoming.ProviderRef
+	}
+	if incoming.Provider != "" {
+		base.Provider = incoming.Provider
+	}
+	if incoming.AccountMode != "" {
+		base.AccountMode = incoming.AccountMode
+	}
+	if incoming.Region != "" {
+		base.Region = incoming.Region
+	}
+	mergeDNSCredentials(&base.Credentials, incoming.Credentials)
+	if incoming.DisableCNAMESupport {
+		base.DisableCNAMESupport = true
+	}
+	if incoming.DisableCompletePropagation {
+		base.DisableCompletePropagation = true
+	}
+	if len(incoming.RecursiveNameservers) > 0 {
+		base.RecursiveNameservers = append([]string(nil), incoming.RecursiveNameservers...)
+	}
+	if len(incoming.Env) > 0 {
+		if base.Env == nil {
+			base.Env = map[string]string{}
+		}
+		for key, value := range incoming.Env {
+			base.Env[key] = value
+		}
+	}
+}
+
+// normalizeDNSConfig applies whitespace normalization and derives env vars once
+// credentials are present. Explicit env keys keep precedence over derived keys.
+func normalizeDNSConfig(dnsConfig *DNSConfig) {
+	if dnsConfig.Env == nil {
+		dnsConfig.Env = map[string]string{}
+	}
+	dnsConfig.ProviderRef = strings.TrimSpace(dnsConfig.ProviderRef)
+	dnsConfig.Provider = strings.TrimSpace(dnsConfig.Provider)
+	dnsConfig.AccountMode = normalizeAccountMode(dnsConfig.AccountMode)
+	dnsConfig.Region = strings.TrimSpace(dnsConfig.Region)
+	for key, value := range deriveDNSEnv(*dnsConfig) {
+		if _, exists := dnsConfig.Env[key]; !exists {
+			dnsConfig.Env[key] = value
+		}
+	}
+}
+
+func validateDNSConfig(scope string, dnsConfig DNSConfig, requireProvider bool) error {
+	if requireProvider && dnsConfig.Provider == "" && dnsConfig.ProviderRef == "" {
+		return fmt.Errorf("%s.provider is required", scope)
+	}
+	if dnsConfig.AccountMode != "" {
+		switch dnsConfig.AccountMode {
+		case "cn", "intl", "global":
+		default:
+			return fmt.Errorf("%s.account_mode must be one of cn, intl, global", scope)
+		}
+	}
+	return nil
+}
+
+// deriveDNSEnv maps the low-config credential model into provider-specific env
+// variables expected by lego DNS drivers.
 func deriveDNSEnv(cfg DNSConfig) map[string]string {
 	values := map[string]string{}
 	provider := detectProviderFamily(cfg.Provider)

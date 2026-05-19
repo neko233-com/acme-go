@@ -4,7 +4,7 @@
   "title": "acme-go configuration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["account", "dns", "certificates"],
+  "required": ["account", "certificates"],
   "properties": {
     "ca": {
       "type": "object",
@@ -27,11 +27,26 @@
         "accept_tos": { "type": "boolean", "const": true }
       }
     },
-    "dns": {
+    "dns": { "$ref": "#/$defs/dnsConfig" },
+    "dns_providers": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/dnsConfig" }
+    },
+    "certificates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/certificate" }
+    }
+  },
+  "$defs": {
+    "dnsConfig": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["provider"],
       "properties": {
+        "provider_ref": {
+          "type": "string",
+          "description": "Reference a named entry from top-level dns_providers. Most useful inside certificates[].dns."
+        },
         "provider": {
           "type": "string",
           "enum": ["alicloud", "aliyun", "alidns", "alicloud-cn", "alicloud-intl", "alicloud-global", "aws", "route53", "aws-global", "azure", "azure-dns", "azure-global", "baiducloud", "baidu", "bce", "baidu-dns", "cloudflare", "cloudflare-intl", "digitalocean", "digital-ocean", "do", "gcloud", "gcp", "google cloud", "google-cloud", "gcloud-global", "hetzner", "hcloud", "hetzner-dns", "huaweicloud", "huawei", "huawei-cloud", "huawei-dns", "huaweicloud-cn", "huaweicloud-intl", "ibmcloud", "ibm", "softlayer", "ibm-dns", "linode", "linode-dns", "oraclecloud", "oracle", "oci", "oracle-dns", "scaleway", "scw", "scaleway-dns", "tencentcloud", "tencent", "dnspod", "tencentcloud-cn", "tencentcloud-intl", "dnspod-intl", "ucloud", "ucloud-dns", "vultr", "vultr-dns", "volcengine", "volc", "volcengine-cn", "volcengine-intl", "volcengine-global"]
@@ -83,13 +98,6 @@
         }
       }
     },
-    "certificates": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "#/$defs/certificate" }
-    }
-  },
-  "$defs": {
     "certificateFiles": {
       "type": "object",
       "additionalProperties": false,
@@ -153,6 +161,7 @@
           "minItems": 1,
           "items": { "type": "string" }
         },
+        "dns": { "$ref": "#/$defs/dnsConfig" },
         "output_dir": { "type": "string" },
         "output_files": { "$ref": "#/$defs/certificateFiles" },
         "key_type": { "type": "string", "enum": ["ec256", "ec384", "rsa2048", "rsa4096", "rsa8192"] },

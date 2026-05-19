@@ -60,8 +60,12 @@ func TestLoadSpecs(t *testing.T) {
 			if cfg.Account.Email != spec.Expect.Email {
 				t.Fatalf("email: got %q want %q", cfg.Account.Email, spec.Expect.Email)
 			}
-			if cfg.DNS.Provider != spec.Expect.Provider {
-				t.Fatalf("provider: got %q want %q", cfg.DNS.Provider, spec.Expect.Provider)
+			effectiveDNS, err := cfg.EffectiveDNS(cfg.Certificates[0])
+			if err != nil {
+				t.Fatalf("effective dns: %v", err)
+			}
+			if effectiveDNS.Provider != spec.Expect.Provider {
+				t.Fatalf("provider: got %q want %q", effectiveDNS.Provider, spec.Expect.Provider)
 			}
 			if cfg.Certificates[0].Domains[0] != spec.Expect.FirstDomain {
 				t.Fatalf("first domain: got %q want %q", cfg.Certificates[0].Domains[0], spec.Expect.FirstDomain)
@@ -91,8 +95,8 @@ func TestLoadSpecs(t *testing.T) {
 				t.Fatalf("post_deploy hook count: got %d want %d", len(cfg.Certificates[0].Hooks.PostDeploy), spec.Expect.PostDeployHooks)
 			}
 			for key, value := range spec.Expect.Env {
-				if cfg.DNS.Env[key] != value {
-					t.Fatalf("env[%s]: got %q want %q", key, cfg.DNS.Env[key], value)
+				if effectiveDNS.Env[key] != value {
+					t.Fatalf("env[%s]: got %q want %q", key, effectiveDNS.Env[key], value)
 				}
 			}
 		})

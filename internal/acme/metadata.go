@@ -28,26 +28,28 @@ type Metadata struct {
 	RevokedAt      *time.Time `json:"revoked_at,omitempty"`
 }
 
-func writeMetadata(cert config.CertificateSpec, cfg *config.Config, resource *certificate.Resource, expiry time.Time) error {
+// Metadata intentionally stores the resolved provider rather than provider_ref
+// so historical records remain readable even when named provider blocks change.
+func writeMetadata(runtime certificateRuntime, cfg *config.Config, resource *certificate.Resource, expiry time.Time) error {
 	metadata, err := json.MarshalIndent(Metadata{
-		Name:           cert.Name,
-		Domains:        cert.Domains,
+		Name:           runtime.cert.Name,
+		Domains:        runtime.cert.Domains,
 		DirectoryURL:   cfg.CA.DirectoryURL,
-		Provider:       cfg.DNS.Provider,
-		Challenge:      cert.Challenge,
+		Provider:       runtime.dns.Provider,
+		Challenge:      runtime.cert.Challenge,
 		IssuedAt:       time.Now().UTC(),
 		NotAfter:       expiry.UTC(),
-		RenewBefore:    cert.RenewBeforeDays,
-		PreferredChain: cert.PreferredChain,
-		MustStaple:     cert.MustStaple,
-		CSRPath:        cert.CSRPath,
+		RenewBefore:    runtime.cert.RenewBeforeDays,
+		PreferredChain: runtime.cert.PreferredChain,
+		MustStaple:     runtime.cert.MustStaple,
+		CSRPath:        runtime.cert.CSRPath,
 		CertURL:        resource.CertURL,
 		CertStableURL:  resource.CertStableURL,
 	}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal metadata: %w", err)
 	}
-	if err := os.WriteFile(metadataPath(cert), metadata, 0o600); err != nil {
+	if err := os.WriteFile(metadataPath(runtime.cert), metadata, 0o600); err != nil {
 		return fmt.Errorf("write metadata: %w", err)
 	}
 	return nil

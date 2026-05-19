@@ -135,3 +135,46 @@ func TestCertificatePathsUseConfiguredOutputFiles(t *testing.T) {
 		t.Fatalf("metadata path: got %q", paths.MetadataFile)
 	}
 }
+
+func TestEffectiveDNSMergesGlobalNamedAndCertificateOverrides(t *testing.T) {
+	cfg := Config{
+		DNS: DNSConfig{
+			Provider:    "cloudflare",
+			Env:         map[string]string{"GLOBAL_ONLY": "true"},
+			Credentials: DNSCredentials{APIToken: "global-token"},
+		},
+		DNSProviders: map[string]DNSConfig{
+			"aliyun-main": {
+				Provider:    "alicloud-cn",
+				Credentials: DNSCredentials{AccessKey: "provider-ak", SecretKey: "provider-sk"},
+			},
+		},
+	}
+
+	effective, err := cfg.EffectiveDNS(CertificateSpec{
+		Name:    "example",
+		Domains: []string{"example.com"},
+		DNS: DNSConfig{
+			ProviderRef: "aliyun-main",
+			Env:         map[string]string{"CERT_ONLY": "true"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("EffectiveDNS: %v", err)
+	}
+	if effective.Provider != "alicloud-cn" {
+		t.Fatalf("provider: got %q want %q", effective.Provider, "alicloud-cn")
+	}
+	if effective.Env["GLOBAL_ONLY"] != "true" {
+		t.Fatalf("expected GLOBAL_ONLY env to be preserved")
+	}
+	if effective.Env["CERT_ONLY"] != "true" {
+		t.Fatalf("expected CERT_ONLY env to be merged")
+	}
+	if effective.Env["ALICLOUD_ACCESS_KEY"] != "provider-ak" {
+		t.Fatalf("access key env: got %q", effective.Env["ALICLOUD_ACCESS_KEY"])
+	}
+	if effective.Env["ALICLOUD_SECRET_KEY"] != "provider-sk" {
+		t.Fatalf("secret key env: got %q", effective.Env["ALICLOUD_SECRET_KEY"])
+	}
+}

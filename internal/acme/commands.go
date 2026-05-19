@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	lego "github.com/go-acme/lego/v4/lego"
 	"github.com/neko233-com/acme-go/internal/config"
 	"github.com/neko233-com/acme-go/internal/dnsprovider"
 )
@@ -56,11 +57,6 @@ func Revoke(cfg *config.Config, name string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	restoreEnv, err := applyEnv(cfg.DNS)
-	if err != nil {
-		return err
-	}
-	defer restoreEnv()
 
 	user, err := LoadOrCreateUser(cfg.Account.Email, cfg.Account.KeyPath)
 	if err != nil {
@@ -68,27 +64,36 @@ func Revoke(cfg *config.Config, name string, out io.Writer) error {
 	}
 
 	for _, cert := range targets {
-		client, err := buildClient(user, cfg, cert)
+		runtime, err := resolveCertificateRuntime(cfg, cert)
+		if err != nil {
+			return err
+		}
+		var client *lego.Client
+		err = runtime.withChallengeEnv(func() error {
+			var buildErr error
+			client, buildErr = buildClient(user, cfg, runtime)
+			return buildErr
+		})
 		if err != nil {
 			return err
 		}
 		if err := ensureRegistration(client, user, cfg.Account.AcceptTOS); err != nil {
 			return err
 		}
-		leaf, err := os.ReadFile(cert.Paths().CertFile)
+		leaf, err := os.ReadFile(runtime.cert.Paths().CertFile)
 		if err != nil {
 			return fmt.Errorf("read certificate for revoke: %w", err)
 		}
 		if err := client.Certificate.Revoke(leaf); err != nil {
-			return fmt.Errorf("revoke %s: %w", cert.Name, err)
+			return fmt.Errorf("revoke %s: %w", runtime.cert.Name, err)
 		}
-		if err := updateRevocationMetadata(cert); err != nil {
+		if err := updateRevocationMetadata(runtime.cert); err != nil {
 			return err
 		}
-		if err := runRevokeHooks(cfg, cert, out); err != nil {
+		if err := runRevokeHooks(runtime, out); err != nil {
 			return err
 		}
-		fmt.Fprintf(out, "%s: revoked\n", cert.Name)
+		fmt.Fprintf(out, "%s: revoked\n", runtime.cert.Name)
 	}
 	return nil
 }
@@ -99,10 +104,14 @@ func Install(cfg *config.Config, name string, out io.Writer) error {
 		return err
 	}
 	for _, cert := range targets {
+		runtime, err := resolveCertificateRuntime(cfg, cert)
+		if err != nil {
+			return err
+		}
 		if err := validateLocalCertificateMaterial(cert); err != nil {
 			return err
 		}
-		if err := installExisting(cfg, cert, out); err != nil {
+		if err := installExisting(runtime, out); err != nil {
 			return err
 		}
 		fmt.Fprintf(out, "%s: installed\n", cert.Name)
@@ -116,10 +125,14 @@ func Deploy(cfg *config.Config, name string, out io.Writer) error {
 		return err
 	}
 	for _, cert := range targets {
+		runtime, err := resolveCertificateRuntime(cfg, cert)
+		if err != nil {
+			return err
+		}
 		if err := validateLocalCertificateMaterial(cert); err != nil {
 			return err
 		}
-		if err := deployExisting(cfg, cert, out); err != nil {
+		if err := deployExisting(runtime, out); err != nil {
 			return err
 		}
 		fmt.Fprintf(out, "%s: deployed\n", cert.Name)
@@ -176,25 +189,29 @@ func Paths(cfg *config.Config, name string, out io.Writer) error {
 }
 
 func inspectCertificate(cfg *config.Config, cert config.CertificateSpec) (CertificateInfo, error) {
-	info := CertificateInfo{
-		Name:        cert.Name,
-		Domains:     append([]string(nil), cert.Domains...),
-		OutputDir:   cert.OutputDir,
-		Paths:       cert.Paths(),
-		Provider:    cfg.DNS.Provider,
-		Status:      "missing",
-		RenewBefore: cert.RenewBeforeDays,
+	runtime, err := resolveCertificateRuntime(cfg, cert)
+	if err != nil {
+		return CertificateInfo{}, err
 	}
-	metadata, err := readMetadata(cert)
+	info := CertificateInfo{
+		Name:        runtime.cert.Name,
+		Domains:     append([]string(nil), runtime.cert.Domains...),
+		OutputDir:   runtime.cert.OutputDir,
+		Paths:       runtime.cert.Paths(),
+		Provider:    runtime.dns.Provider,
+		Status:      "missing",
+		RenewBefore: runtime.cert.RenewBeforeDays,
+	}
+	metadata, err := readMetadata(runtime.cert)
 	if err == nil {
 		info.Metadata = metadata
 	}
-	expiry, err := readCertificateExpiry(cert.Paths().FullChainFile)
+	expiry, err := readCertificateExpiry(runtime.cert.Paths().FullChainFile)
 	if err != nil {
 		return info, nil
 	}
 	info.NotAfter = &expiry
-	needsRenew, _, err := certificateNeedsRenew(cert)
+	needsRenew, _, err := certificateNeedsRenew(runtime.cert)
 	if err != nil {
 		return info, nil
 	}

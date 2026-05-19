@@ -111,5 +111,24 @@
         "OCI_PRIVKEY_FILE": ".oracle/oci.pem"
       }
     }
+  },
+  {
+    "name": "named-dns-provider-selected-per-certificate",
+    "env": {},
+    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  env:\n    GLOBAL_SHARED: enabled\ndns_providers:\n  cf-prod:\n    provider: cloudflare\n    credentials:\n      api_token: cf-token\n  aliyun-cn:\n    provider: alicloud-cn\n    credentials:\n      access_key: aliyun-ak\n      secret_key: aliyun-sk\ncertificates:\n  - name: example\n    domains:\n      - example.com\n    dns:\n      provider_ref: aliyun-cn\n",
+    "local_override": "",
+    "expect": {
+      "email": "ops@example.com",
+      "provider": "alicloud-cn",
+      "first_domain": "example.com",
+      "renew_before_days": 30,
+      "challenge": "dns-01",
+      "bundle": true,
+      "env": {
+        "GLOBAL_SHARED": "enabled",
+        "ALICLOUD_ACCESS_KEY": "aliyun-ak",
+        "ALICLOUD_SECRET_KEY": "aliyun-sk"
+      }
+    }
   }
 ]

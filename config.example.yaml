@@ -7,22 +7,32 @@ account:
   accept_tos: true
 
 dns:
-  # Canonical names and aliases are both supported, including cn/intl/global forms.
-  provider: alicloud-cn
-  # Optional: cn | intl | global. Some vendors use this to choose a better default region.
-  account_mode: cn
-  # Prefer credentials for common providers. acme-go maps these into provider env vars automatically.
-  credentials:
-    access_key: ${ALICLOUD_ACCESS_KEY}
-    secret_key: ${ALICLOUD_SECRET_KEY}
+  # Global defaults shared by all certificate entries unless they point at a named provider.
+  disable_cname_support: false
+  disable_complete_propagation: false
+  recursive_nameservers: []
   # env still works and has higher priority when you need vendor-specific overrides.
   env: {}
+
+dns_providers:
+  aliyun-cn:
+    provider: alicloud-cn
+    account_mode: cn
+    credentials:
+      access_key: ${ALICLOUD_ACCESS_KEY}
+      secret_key: ${ALICLOUD_SECRET_KEY}
+  cloudflare-global:
+    provider: cloudflare
+    credentials:
+      api_token: ${CLOUDFLARE_DNS_API_TOKEN}
 
 certificates:
   - name: example-prod
     domains:
       - example.com
       - '*.example.com'
+    dns:
+      provider_ref: aliyun-cn
     output_dir: certs/example-prod
     output_files:
       # Leaf certificate. Suggested names: cert.pem, tls.crt, server.crt.
@@ -60,6 +70,27 @@ certificates:
       - name: reload-service
         type: command
         command: echo reload-service
+    hooks:
+      pre_issue: []
+      post_issue: []
+      pre_renew: []
+      post_renew: []
+      post_revoke: []
+      post_install: []
+      post_deploy: []
+    bundle: true
+
+  - name: example-global
+    domains:
+      - api.example.com
+    dns:
+      provider_ref: cloudflare-global
+    output_dir: certs/example-global
+    challenge: dns-01
+    key_type: ec256
+    renew_before_days: 30
+    install: {}
+    deploy: []
     hooks:
       pre_issue: []
       post_issue: []

@@ -75,12 +75,6 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 		return Result{}, err
 	}
 
-	restoreEnv, err := applyEnv(cfg.DNS)
-	if err != nil {
-		return Result{}, err
-	}
-	defer restoreEnv()
-
 	user, err := LoadOrCreateUser(cfg.Account.Email, cfg.Account.KeyPath)
 	if err != nil {
 		return Result{}, err
@@ -88,6 +82,11 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 
 	result := Result{}
 	for _, cert := range targets {
+		runtime, err := resolveCertificateRuntime(cfg, cert)
+		if err != nil {
+			return result, err
+		}
+
 		needsRenew, expiry, err := certificateNeedsRenew(cert)
 		if err == nil && !needsRenew && !options.Force {
 			fmt.Fprintf(options.Out, "%s: skip, certificate valid until %s\n", cert.Name, expiry.Format(time.RFC3339))
@@ -95,28 +94,33 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 			continue
 		}
 
-		client, err := buildClient(user, cfg, cert)
+		var client *lego.Client
+		err = runtime.withChallengeEnv(func() error {
+			var buildErr error
+			client, buildErr = buildClient(user, cfg, runtime)
+			return buildErr
+		})
 		if err != nil {
 			return result, err
 		}
 		if err := ensureRegistration(client, user, cfg.Account.AcceptTOS); err != nil {
 			return result, err
 		}
-		if err := runPreHooks(cert, options.Mode, newDeployContext(cfg, cert), options.Out); err != nil {
+		if err := runPreHooks(runtime.cert, options.Mode, runtime.deployContext, options.Out); err != nil {
 			return result, err
 		}
 
-		resource, err := executeCertificateOperation(client, cert, options.Mode)
+		resource, err := executeCertificateOperation(client, runtime.cert, options.Mode)
 		if err != nil {
-			return result, fmt.Errorf("%s %s: %w", options.Mode, cert.Name, err)
+			return result, fmt.Errorf("%s %s: %w", options.Mode, runtime.cert.Name, err)
 		}
-		if err := writeCertificate(cert, cfg, resource); err != nil {
+		if err := writeCertificate(runtime, cfg, resource); err != nil {
 			return result, err
 		}
-		if err := runSuccessActions(cfg, cert, options.Mode, options.Out); err != nil {
+		if err := runSuccessActions(runtime, options.Mode, options.Out); err != nil {
 			return result, err
 		}
-		fmt.Fprintf(options.Out, "%s: wrote certificate to %s\n", cert.Name, cert.OutputDir)
+		fmt.Fprintf(options.Out, "%s: wrote certificate to %s\n", runtime.cert.Name, runtime.cert.OutputDir)
 		result.Changed++
 	}
 
@@ -142,6 +146,7 @@ func applyEnv(dnsConfig config.DNSConfig) (func(), error) {
 		value   string
 		present bool
 	}
+	// Copy first so the restore phase only touches keys we intentionally mutate.
 	values := map[string]string{}
 	for key, value := range dnsConfig.Env {
 		values[key] = value
@@ -168,10 +173,10 @@ func applyEnv(dnsConfig config.DNSConfig) (func(), error) {
 	}, nil
 }
 
-func buildClient(user *User, cfg *config.Config, cert config.CertificateSpec) (*lego.Client, error) {
+func buildClient(user *User, cfg *config.Config, runtime certificateRuntime) (*lego.Client, error) {
 	legoConfig := lego.NewConfig(user)
 	legoConfig.CADirURL = cfg.CA.DirectoryURL
-	legoConfig.Certificate.KeyType = mapKeyType(cert.KeyType)
+	legoConfig.Certificate.KeyType = mapKeyType(runtime.cert.KeyType)
 
 	client, err := lego.NewClient(legoConfig)
 	if err != nil {
@@ -179,29 +184,29 @@ func buildClient(user *User, cfg *config.Config, cert config.CertificateSpec) (*
 	}
 
 	challengeOptions := []dns01.ChallengeOption{}
-	if cfg.DNS.DisableCompletePropagation {
+	if runtime.dns.DisableCompletePropagation {
 		challengeOptions = append(challengeOptions, dns01.DisableCompletePropagationRequirement())
 	}
-	if len(cfg.DNS.RecursiveNameservers) > 0 {
-		challengeOptions = append(challengeOptions, dns01.AddRecursiveNameservers(cfg.DNS.RecursiveNameservers))
+	if len(runtime.dns.RecursiveNameservers) > 0 {
+		challengeOptions = append(challengeOptions, dns01.AddRecursiveNameservers(runtime.dns.RecursiveNameservers))
 	}
 
-	if err := configureChallenge(client, cfg, cert, challengeOptions); err != nil {
+	if err := configureChallenge(client, runtime.cert, runtime.dns, challengeOptions); err != nil {
 		return nil, err
 	}
 	return client, nil
 }
 
-func configureChallenge(client *lego.Client, cfg *config.Config, cert config.CertificateSpec, dnsOptions []dns01.ChallengeOption) error {
+func configureChallenge(client *lego.Client, cert config.CertificateSpec, dnsConfig config.DNSConfig, dnsOptions []dns01.ChallengeOption) error {
 	switch cert.Challenge {
 	case "dns-01":
-		strategy, err := dnsprovider.Resolve(cfg.DNS.Provider)
+		strategy, err := dnsprovider.Resolve(dnsConfig.Provider)
 		if err != nil {
 			return err
 		}
-		provider, err := strategy.NewProvider(cfg.DNS)
+		provider, err := strategy.NewProvider(dnsConfig)
 		if err != nil {
-			return fmt.Errorf("build DNS provider %q: %w", cfg.DNS.Provider, err)
+			return fmt.Errorf("build DNS provider %q: %w", dnsConfig.Provider, err)
 		}
 		if err := client.Challenge.SetDNS01Provider(provider, dnsOptions...); err != nil {
 			return fmt.Errorf("attach DNS provider: %w", err)
@@ -247,6 +252,8 @@ func ensureRegistration(client *lego.Client, user *User, acceptTOS bool) error {
 	return nil
 }
 
+// mapKeyType keeps config-facing key names decoupled from lego constants so new
+// key families can be added in one place.
 func mapKeyType(value string) certcrypto.KeyType {
 	switch strings.ToLower(value) {
 	case "ec384":
@@ -341,11 +348,11 @@ func readCertificateExpiry(path string) (time.Time, error) {
 	return cert.NotAfter, nil
 }
 
-func writeCertificate(cert config.CertificateSpec, cfg *config.Config, resource *certificate.Resource) error {
-	if err := os.MkdirAll(cert.OutputDir, 0o755); err != nil {
+func writeCertificate(runtime certificateRuntime, cfg *config.Config, resource *certificate.Resource) error {
+	if err := os.MkdirAll(runtime.cert.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("create certificate dir: %w", err)
 	}
-	paths := cert.Paths()
+	paths := runtime.cert.Paths()
 
 	leaf, chain, err := splitCertificate(resource.Certificate)
 	if err != nil {
@@ -361,22 +368,27 @@ func writeCertificate(cert config.CertificateSpec, cfg *config.Config, resource 
 		return err
 	}
 
-	files := map[string][]byte{
-		paths.CertFile:      leaf,
-		paths.ChainFile:     chain,
-		paths.FullChainFile: fullChain,
-		paths.KeyFile:       resource.PrivateKey,
-		paths.PublicKeyFile: publicKey,
+	// Keep writes deterministic so behavior is easier to reason about in tests and
+	// future hooks that may watch the output directory.
+	files := []struct {
+		path    string
+		content []byte
+	}{
+		{path: paths.CertFile, content: leaf},
+		{path: paths.ChainFile, content: chain},
+		{path: paths.FullChainFile, content: fullChain},
+		{path: paths.KeyFile, content: resource.PrivateKey},
+		{path: paths.PublicKeyFile, content: publicKey},
 	}
-	for path, content := range files {
-		if len(content) == 0 {
+	for _, file := range files {
+		if len(file.content) == 0 {
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return fmt.Errorf("create certificate file dir for %s: %w", path, err)
+		if err := os.MkdirAll(filepath.Dir(file.path), 0o755); err != nil {
+			return fmt.Errorf("create certificate file dir for %s: %w", file.path, err)
 		}
-		if err := os.WriteFile(path, content, 0o600); err != nil {
-			return fmt.Errorf("write %s: %w", path, err)
+		if err := os.WriteFile(file.path, file.content, 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", file.path, err)
 		}
 	}
 
@@ -385,7 +397,7 @@ func writeCertificate(cert config.CertificateSpec, cfg *config.Config, resource 
 		return err
 	}
 
-	return writeMetadata(cert, cfg, resource, expiry)
+	return writeMetadata(runtime, cfg, resource, expiry)
 }
 
 func publicKeyPEMFromCertificate(data []byte) ([]byte, error) {
