@@ -237,9 +237,9 @@ dns:
   disable_complete_propagation: false
   recursive_nameservers: []
 
-For common vendors, prefer `dns.credentials` over manually writing `dns.env`. acme-go derives the provider env vars for AliCloud, Volcengine, Tencent Cloud, Cloudflare, AWS, Google Cloud, and Azure. `dns.env` still works and overrides the derived values when you need vendor-specific tuning.
+For common vendors, prefer `dns.credentials` over manually writing `dns.env`. acme-go derives the provider env vars for AliCloud, Volcengine, Tencent Cloud, Cloudflare, AWS, Google Cloud, Azure, DigitalOcean, Hetzner, Huawei Cloud, IBM Cloud, Linode, Oracle Cloud, Scaleway, UCloud, Baidu Cloud, and Vultr. `dns.env` still works and overrides the derived values when you need vendor-specific tuning.
 
-常见厂商建议优先填写 `dns.credentials`，不要手写 `dns.env`。acme-go 会自动为阿里云、火山引擎、腾讯云、Cloudflare、AWS、Google Cloud、Azure 推导所需环境变量。若你需要厂商特定参数，`dns.env` 仍然可用，且优先级更高。
+常见厂商建议优先填写 `dns.credentials`，不要手写 `dns.env`。acme-go 会自动为阿里云、火山引擎、腾讯云、Cloudflare、AWS、Google Cloud、Azure、DigitalOcean、Hetzner、华为云、IBM Cloud、Linode、Oracle Cloud、UCloud、百度云、Scaleway、Vultr 推导所需环境变量。若你需要厂商特定参数，`dns.env` 仍然可用，且优先级更高。
 
 If you operate multiple regional accounts, use provider aliases such as `alicloud-cn`, `alicloud-intl`, `volcengine-cn`, `volcengine-intl`, `tencentcloud-cn`, or `tencentcloud-intl`. You can also set `dns.account_mode` to `cn`, `intl`, or `global`; for example, Volcengine defaults to `cn-beijing` for `cn` and `ap-singapore` for `intl/global` when no explicit `dns.region` is set.
 
@@ -358,20 +358,40 @@ Hook 与 deploy 命令可用的重要环境变量包括：
 ## Supported Vendors | 支持的 DNS 厂商
 
 - `alicloud`: aliases `aliyun`, `alidns`
+- `aws`: aliases `route53`
+- `azure`
+- `baiducloud`: aliases `baidu`, `bce`, `baidu-dns`
 - `cloudflare`
+- `digitalocean`: aliases `do`, `digital-ocean`
+- `gcloud`: aliases `gcp`, `google cloud`
+- `hetzner`: aliases `hcloud`, `hetzner-dns`
+- `huaweicloud`: aliases `huawei`, `huawei-cloud`, `huawei-dns`
+- `ibmcloud`: aliases `ibm`, `softlayer`, `ibm-dns`
+- `linode`: aliases `linode-dns`
+- `oraclecloud`: aliases `oracle`, `oci`, `oracle-dns`
+- `scaleway`: aliases `scw`, `scaleway-dns`
 - `volcengine`
 - `tencentcloud`: aliases `tencent`, `dnspod`
-- `azure`
-- `gcloud`: aliases `gcp`, `google cloud`
-- `aws`: aliases `route53`
+- `ucloud`: aliases `ucloud-dns`
+- `vultr`: aliases `vultr-dns`
 
 - `alicloud`：别名 `aliyun`、`alidns`
+- `aws`：别名 `route53`
+- `azure`
+- `baiducloud`：别名 `baidu`、`bce`、`baidu-dns`
 - `cloudflare`
+- `digitalocean`：别名 `do`、`digital-ocean`
+- `gcloud`：别名 `gcp`、`google cloud`
+- `hetzner`：别名 `hcloud`、`hetzner-dns`
+- `huaweicloud`：别名 `huawei`、`huawei-cloud`、`huawei-dns`
+- `ibmcloud`：别名 `ibm`、`softlayer`、`ibm-dns`
+- `linode`：别名 `linode-dns`
+- `oraclecloud`：别名 `oracle`、`oci`、`oracle-dns`
+- `scaleway`：别名 `scw`、`scaleway-dns`
 - `volcengine`
 - `tencentcloud`：别名 `tencent`、`dnspod`
-- `azure`
-- `gcloud`：别名 `gcp`、`google cloud`
-- `aws`：别名 `route53`
+- `ucloud`：别名 `ucloud-dns`
+- `vultr`：别名 `vultr-dns`
 
 ## Testing and Spec | 测试与规范
 

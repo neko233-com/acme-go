@@ -34,7 +34,7 @@
       "properties": {
         "provider": {
           "type": "string",
-          "enum": ["alicloud", "aliyun", "alidns", "alicloud-cn", "alicloud-intl", "alicloud-global", "cloudflare", "cloudflare-intl", "volcengine", "volc", "volcengine-cn", "volcengine-intl", "volcengine-global", "tencentcloud", "tencent", "dnspod", "tencentcloud-cn", "tencentcloud-intl", "dnspod-intl", "azure", "azure-dns", "azure-global", "gcloud", "gcp", "google cloud", "google-cloud", "gcloud-global", "aws", "route53", "aws-global"]
+          "enum": ["alicloud", "aliyun", "alidns", "alicloud-cn", "alicloud-intl", "alicloud-global", "aws", "route53", "aws-global", "azure", "azure-dns", "azure-global", "baiducloud", "baidu", "bce", "baidu-dns", "cloudflare", "cloudflare-intl", "digitalocean", "digital-ocean", "do", "gcloud", "gcp", "google cloud", "google-cloud", "gcloud-global", "hetzner", "hcloud", "hetzner-dns", "huaweicloud", "huawei", "huawei-cloud", "huawei-dns", "huaweicloud-cn", "huaweicloud-intl", "ibmcloud", "ibm", "softlayer", "ibm-dns", "linode", "linode-dns", "oraclecloud", "oracle", "oci", "oracle-dns", "scaleway", "scw", "scaleway-dns", "tencentcloud", "tencent", "dnspod", "tencentcloud-cn", "tencentcloud-intl", "dnspod-intl", "ucloud", "ucloud-dns", "vultr", "vultr-dns", "volcengine", "volc", "volcengine-cn", "volcengine-intl", "volcengine-global"]
         },
         "account_mode": {
           "type": "string",
@@ -48,15 +48,22 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "access_key": { "type": "string", "description": "Common access key field for AliCloud, Volcengine, AWS and similar providers." },
-            "secret_key": { "type": "string", "description": "Common secret key field for AliCloud, Volcengine, AWS and similar providers." },
+            "access_key": { "type": "string", "description": "Common access key field for AliCloud, Volcengine, AWS, Huawei Cloud and similar providers." },
+            "secret_key": { "type": "string", "description": "Common secret key field for AliCloud, Volcengine, AWS, Huawei Cloud and similar providers." },
             "secret_id": { "type": "string", "description": "Tencent-style secret id, also accepted as access key for compatible vendors." },
             "secret_token": { "type": "string", "description": "Optional session token for temporary credentials." },
-            "api_token": { "type": "string", "description": "API token for providers like Cloudflare." },
-            "api_key": { "type": "string", "description": "Fallback API key field for vendors that still use key-based auth." },
+            "username": { "type": "string", "description": "Username for providers like IBM Cloud SoftLayer." },
+            "api_token": { "type": "string", "description": "API token for providers like Cloudflare, DigitalOcean, Hetzner, Linode, and Scaleway." },
+            "api_key": { "type": "string", "description": "Fallback API key field for vendors that still use key-based auth, such as Vultr." },
             "api_email": { "type": "string", "description": "Optional API email for Cloudflare legacy auth." },
-            "project_id": { "type": "string", "description": "Google Cloud project id." },
+            "project_id": { "type": "string", "description": "Google Cloud or Scaleway project id." },
             "service_account_file": { "type": "string", "description": "Path to a Google Cloud service account JSON file." },
+            "compartment_id": { "type": "string", "description": "Oracle Cloud compartment OCID." },
+            "tenancy_id": { "type": "string", "description": "Oracle Cloud tenancy OCID." },
+            "user_id": { "type": "string", "description": "Oracle Cloud user OCID." },
+            "fingerprint": { "type": "string", "description": "Oracle Cloud API key fingerprint." },
+            "private_key_file": { "type": "string", "description": "Path to an Oracle Cloud private key file." },
+            "private_key_pass": { "type": "string", "description": "Optional Oracle Cloud private key password." },
             "subscription_id": { "type": "string", "description": "Azure subscription id." },
             "tenant_id": { "type": "string", "description": "Azure tenant id." },
             "client_id": { "type": "string", "description": "Azure client id." },

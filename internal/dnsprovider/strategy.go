@@ -9,10 +9,20 @@ import (
 	"github.com/neko233-com/acme-go/internal/dnsprovider/alicloud"
 	"github.com/neko233-com/acme-go/internal/dnsprovider/aws"
 	"github.com/neko233-com/acme-go/internal/dnsprovider/azure"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/baiducloud"
 	"github.com/neko233-com/acme-go/internal/dnsprovider/cloudflare"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/digitalocean"
 	"github.com/neko233-com/acme-go/internal/dnsprovider/gcloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/hetzner"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/huaweicloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/ibmcloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/linode"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/oraclecloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/scaleway"
 	"github.com/neko233-com/acme-go/internal/dnsprovider/tencentcloud"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/ucloud"
 	"github.com/neko233-com/acme-go/internal/dnsprovider/volcengine"
+	"github.com/neko233-com/acme-go/internal/dnsprovider/vultr"
 
 	"github.com/go-acme/lego/v4/challenge"
 )
@@ -57,9 +67,19 @@ func supportedStrategies() []Strategy {
 		alicloud.Strategy{},
 		aws.Strategy{},
 		azure.Strategy{},
+		baiducloud.Strategy{},
 		cloudflare.Strategy{},
+		digitalocean.Strategy{},
 		gcloud.Strategy{},
+		hetzner.Strategy{},
+		huaweicloud.Strategy{},
+		ibmcloud.Strategy{},
+		linode.Strategy{},
+		oraclecloud.Strategy{},
+		scaleway.Strategy{},
 		tencentcloud.Strategy{},
+		ucloud.Strategy{},
+		vultr.Strategy{},
 		volcengine.Strategy{},
 	}
 }

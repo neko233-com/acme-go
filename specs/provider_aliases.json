@@ -12,16 +12,56 @@
     "inputs": ["azure", "azuredns", "azure-dns", "azure-global"]
   },
   {
+    "canonical": "baiducloud",
+    "inputs": ["baiducloud", "baidu", "bce", "baidu-dns"]
+  },
+  {
     "canonical": "cloudflare",
     "inputs": ["cloudflare", "cf", "cloudflare-intl"]
+  },
+  {
+    "canonical": "digitalocean",
+    "inputs": ["digitalocean", "digital-ocean", "do"]
   },
   {
     "canonical": "gcloud",
     "inputs": ["gcloud", "gcp", "google cloud", "google-cloud", "gcloud-global"]
   },
   {
+    "canonical": "hetzner",
+    "inputs": ["hetzner", "hcloud", "hetzner-dns"]
+  },
+  {
+    "canonical": "huaweicloud",
+    "inputs": ["huaweicloud", "huawei", "huawei-cloud", "huawei-dns", "huaweicloud-cn", "huaweicloud-intl"]
+  },
+  {
+    "canonical": "ibmcloud",
+    "inputs": ["ibmcloud", "ibm", "softlayer", "ibm-dns"]
+  },
+  {
+    "canonical": "linode",
+    "inputs": ["linode", "linode-dns"]
+  },
+  {
+    "canonical": "oraclecloud",
+    "inputs": ["oraclecloud", "oracle", "oci", "oracle-dns"]
+  },
+  {
+    "canonical": "scaleway",
+    "inputs": ["scaleway", "scw", "scaleway-dns"]
+  },
+  {
     "canonical": "tencentcloud",
     "inputs": ["tencentcloud", "tencent", "dnspod", "tencentcloud-cn", "tencentcloud-intl", "dnspod-intl"]
+  },
+  {
+    "canonical": "ucloud",
+    "inputs": ["ucloud", "ucloud-dns"]
+  },
+  {
+    "canonical": "vultr",
+    "inputs": ["vultr", "vultr-dns"]
   },
   {
     "canonical": "volcengine",

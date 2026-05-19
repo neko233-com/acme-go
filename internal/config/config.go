@@ -45,11 +45,18 @@ type DNSCredentials struct {
 	SecretKey          string `yaml:"secret_key" json:"secret_key"`
 	SecretID           string `yaml:"secret_id" json:"secret_id"`
 	SecretToken        string `yaml:"secret_token" json:"secret_token"`
+	Username           string `yaml:"username" json:"username"`
 	APIToken           string `yaml:"api_token" json:"api_token"`
 	APIKey             string `yaml:"api_key" json:"api_key"`
 	APIEmail           string `yaml:"api_email" json:"api_email"`
 	ProjectID          string `yaml:"project_id" json:"project_id"`
 	ServiceAccountFile string `yaml:"service_account_file" json:"service_account_file"`
+	CompartmentID      string `yaml:"compartment_id" json:"compartment_id"`
+	TenancyID          string `yaml:"tenancy_id" json:"tenancy_id"`
+	UserID             string `yaml:"user_id" json:"user_id"`
+	Fingerprint        string `yaml:"fingerprint" json:"fingerprint"`
+	PrivateKeyFile     string `yaml:"private_key_file" json:"private_key_file"`
+	PrivateKeyPass     string `yaml:"private_key_pass" json:"private_key_pass"`
 	SubscriptionID     string `yaml:"subscription_id" json:"subscription_id"`
 	TenantID           string `yaml:"tenant_id" json:"tenant_id"`
 	ClientID           string `yaml:"client_id" json:"client_id"`
@@ -481,6 +488,9 @@ func mergeDNSCredentials(base *DNSCredentials, incoming DNSCredentials) {
 	if incoming.SecretToken != "" {
 		base.SecretToken = incoming.SecretToken
 	}
+	if incoming.Username != "" {
+		base.Username = incoming.Username
+	}
 	if incoming.APIToken != "" {
 		base.APIToken = incoming.APIToken
 	}
@@ -495,6 +505,24 @@ func mergeDNSCredentials(base *DNSCredentials, incoming DNSCredentials) {
 	}
 	if incoming.ServiceAccountFile != "" {
 		base.ServiceAccountFile = incoming.ServiceAccountFile
+	}
+	if incoming.CompartmentID != "" {
+		base.CompartmentID = incoming.CompartmentID
+	}
+	if incoming.TenancyID != "" {
+		base.TenancyID = incoming.TenancyID
+	}
+	if incoming.UserID != "" {
+		base.UserID = incoming.UserID
+	}
+	if incoming.Fingerprint != "" {
+		base.Fingerprint = incoming.Fingerprint
+	}
+	if incoming.PrivateKeyFile != "" {
+		base.PrivateKeyFile = incoming.PrivateKeyFile
+	}
+	if incoming.PrivateKeyPass != "" {
+		base.PrivateKeyPass = incoming.PrivateKeyPass
 	}
 	if incoming.SubscriptionID != "" {
 		base.SubscriptionID = incoming.SubscriptionID
@@ -528,6 +556,11 @@ func deriveDNSEnv(cfg DNSConfig) map[string]string {
 	case "alicloud":
 		set("ALICLOUD_ACCESS_KEY", cfg.Credentials.AccessKey)
 		set("ALICLOUD_SECRET_KEY", cfg.Credentials.SecretKey)
+	case "digitalocean":
+		set("DO_AUTH_TOKEN", firstNonEmpty(cfg.Credentials.APIToken, cfg.Credentials.APIKey))
+	case "baiducloud":
+		set("BAIDUCLOUD_ACCESS_KEY_ID", firstNonEmpty(cfg.Credentials.AccessKey, cfg.Credentials.SecretID))
+		set("BAIDUCLOUD_SECRET_ACCESS_KEY", cfg.Credentials.SecretKey)
 	case "volcengine":
 		set("VOLC_ACCESSKEY", cfg.Credentials.AccessKey)
 		set("VOLC_SECRETKEY", cfg.Credentials.SecretKey)
@@ -553,12 +586,41 @@ func deriveDNSEnv(cfg DNSConfig) map[string]string {
 	case "gcloud":
 		set("GCE_PROJECT", cfg.Credentials.ProjectID)
 		set("GOOGLE_APPLICATION_CREDENTIALS", cfg.Credentials.ServiceAccountFile)
+	case "hetzner":
+		set("HETZNER_API_TOKEN", firstNonEmpty(cfg.Credentials.APIToken, cfg.Credentials.APIKey))
+	case "huaweicloud":
+		set("HUAWEICLOUD_ACCESS_KEY_ID", firstNonEmpty(cfg.Credentials.AccessKey, cfg.Credentials.SecretID))
+		set("HUAWEICLOUD_SECRET_ACCESS_KEY", cfg.Credentials.SecretKey)
+		set("HUAWEICLOUD_REGION", cfg.Region)
+	case "linode":
+		set("LINODE_TOKEN", firstNonEmpty(cfg.Credentials.APIToken, cfg.Credentials.APIKey))
+	case "ibmcloud":
+		set("SOFTLAYER_USERNAME", cfg.Credentials.Username)
+		set("SOFTLAYER_API_KEY", firstNonEmpty(cfg.Credentials.APIKey, cfg.Credentials.APIToken))
+	case "oraclecloud":
+		set("OCI_COMPARTMENT_OCID", cfg.Credentials.CompartmentID)
+		set("OCI_REGION", cfg.Region)
+		set("OCI_TENANCY_OCID", cfg.Credentials.TenancyID)
+		set("OCI_USER_OCID", cfg.Credentials.UserID)
+		set("OCI_PUBKEY_FINGERPRINT", cfg.Credentials.Fingerprint)
+		set("OCI_PRIVKEY_FILE", cfg.Credentials.PrivateKeyFile)
+		set("OCI_PRIVKEY_PASS", cfg.Credentials.PrivateKeyPass)
+	case "scaleway":
+		set("SCALEWAY_API_TOKEN", firstNonEmpty(cfg.Credentials.APIToken, cfg.Credentials.SecretKey, cfg.Credentials.APIKey))
+		set("SCALEWAY_PROJECT_ID", cfg.Credentials.ProjectID)
 	case "azure":
 		set("AZURE_SUBSCRIPTION_ID", cfg.Credentials.SubscriptionID)
 		set("AZURE_TENANT_ID", cfg.Credentials.TenantID)
 		set("AZURE_CLIENT_ID", cfg.Credentials.ClientID)
 		set("AZURE_CLIENT_SECRET", cfg.Credentials.ClientSecret)
 		set("AZURE_RESOURCE_GROUP", cfg.Credentials.ResourceGroup)
+	case "ucloud":
+		set("UCLOUD_PUBLIC_KEY", firstNonEmpty(cfg.Credentials.AccessKey, cfg.Credentials.SecretID))
+		set("UCLOUD_PRIVATE_KEY", cfg.Credentials.SecretKey)
+		set("UCLOUD_REGION", cfg.Region)
+		set("UCLOUD_PROJECT_ID", cfg.Credentials.ProjectID)
+	case "vultr":
+		set("VULTR_API_KEY", firstNonEmpty(cfg.Credentials.APIKey, cfg.Credentials.APIToken))
 	}
 
 	return values
@@ -573,12 +635,32 @@ func detectProviderFamily(provider string) string {
 		return "aws"
 	case "azure", "azuredns", "azurednsglobal", "azurednsintl":
 		return "azure"
+	case "baiducloud", "baidu", "bce", "baidudns":
+		return "baiducloud"
 	case "cloudflare", "cf", "cloudflareglobal":
 		return "cloudflare"
+	case "digitalocean", "digitaloceancom", "digitaloceancloud", "do":
+		return "digitalocean"
 	case "gcloud", "gcp", "googlecloud", "googlecloudglobal", "google":
 		return "gcloud"
+	case "hetzner", "hcloud", "hetznerdns":
+		return "hetzner"
+	case "huaweicloud", "huawei", "huaweicloudcn", "huaweicloudintl", "huaweidns", "huaweicloudglobal":
+		return "huaweicloud"
+	case "ibmcloud", "ibm", "softlayer", "ibmdns":
+		return "ibmcloud"
+	case "linode", "linodedns":
+		return "linode"
+	case "oraclecloud", "oracle", "oci", "oracledns":
+		return "oraclecloud"
+	case "scaleway", "scw", "scalewaydns":
+		return "scaleway"
 	case "tencentcloud", "tencent", "dnspod", "tencentdns", "tencentcloudcn", "tencentcloudintl", "dnspodintl":
 		return "tencentcloud"
+	case "ucloud", "uclouddns":
+		return "ucloud"
+	case "vultr", "vultrdns":
+		return "vultr"
 	case "volcengine", "volc", "volcdns", "volcanicengine", "volcenginecn", "volcengineintl", "volcengineglobal":
 		return "volcengine"
 	default:
