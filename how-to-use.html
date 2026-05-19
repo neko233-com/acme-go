@@ -183,6 +183,7 @@
         <a href="#commands">Commands | 命令</a>
         <a href="#challenges">Challenges | 模式</a>
         <a href="#config">Config | 配置</a>
+        <a href="#service">Service | 常驻服务</a>
         <a href="#deploy">Deploy and Hooks | 部署与钩子</a>
         <a href="#release">Release | 发布</a>
         <a href="#readme">README</a>
@@ -223,6 +224,7 @@ go run . list -config config.yaml
 go run . info -config config.yaml -name example-prod
 go run . issue -config config.yaml [-name example-prod] [-force]
 go run . renew -config config.yaml [-name example-prod] [-force]
+go run . auto-renew -config config.yaml [-name example-prod] [-force]
 go run . revoke -config config.yaml -name example-prod
 go run . install-cert -config config.yaml -name example-prod
 go run . deploy -config config.yaml -name example-prod
@@ -265,6 +267,13 @@ account:
   key_path: .acme/account.pem
   accept_tos: true
 
+automation:
+  renew_interval: 24h
+  retry_backoff: 1m
+  max_retry_backoff: 15m
+  max_retry_attempts: 5
+  failure_commands: []
+
 dns:
   provider: alicloud
   env:
@@ -301,6 +310,25 @@ certificates:
       post_install: []
       post_deploy: []
       post_revoke: []</code></pre>
+      <p style="margin-top:14px;">Auto-renew failure commands can read <code>ACME_LOOP_TARGET</code>, <code>ACME_LOOP_ATTEMPT</code>, <code>ACME_LOOP_NEXT_RETRY</code>, <code>ACME_LOOP_FINAL_FAILURE</code>, and <code>ACME_LOOP_ERROR</code>.</p>
+      <p>自动续期失败告警命令可以读取 <code>ACME_LOOP_TARGET</code>、<code>ACME_LOOP_ATTEMPT</code>、<code>ACME_LOOP_NEXT_RETRY</code>、<code>ACME_LOOP_FINAL_FAILURE</code>、<code>ACME_LOOP_ERROR</code> 等环境变量。</p>
+    </section>
+
+    <section class="section" id="service">
+      <h2>Service | 常驻服务</h2>
+      <div class="grid">
+        <article class="panel">
+          <h3>Linux systemd</h3>
+          <p>Use <code>install-systemd-service.sh</code> to install and enable a long-running auto-renew service.</p>
+          <pre><code>chmod +x install-systemd-service.sh
+./install-systemd-service.sh acme-go-auto-renew /etc/acme-go/config.yaml /usr/local/bin/acme-go</code></pre>
+        </article>
+        <article class="panel">
+          <h3>Windows Service</h3>
+          <p>Use <code>install-windows-service.cmd</code> together with <code>nssm</code> to wrap <code>acme-go.exe</code> as a Windows Service.</p>
+          <pre><code>install-windows-service.cmd acme-go-auto-renew C:\acme-go\config.yaml C:\acme-go\acme-go.exe</code></pre>
+        </article>
+      </div>
     </section>
 
     <section class="section" id="deploy">

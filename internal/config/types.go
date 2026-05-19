@@ -4,6 +4,9 @@ import "path/filepath"
 
 const defaultCADirectoryURL = "https://acme-v02.api.letsencrypt.org/directory"
 const defaultAutomationRenewInterval = "24h"
+const defaultAutomationRetryBackoff = "1m"
+const defaultAutomationMaxRetryBackoff = "15m"
+const defaultAutomationMaxRetryAttempts = 5
 
 // Config keeps the declarative surface stable while allowing the runtime to
 // flatten it into per-certificate execution state.
@@ -27,6 +30,17 @@ type AutomationConfig struct {
 	// RenewInterval is a Go duration string such as 30m, 6h, or 24h.
 	// Default is 24h so renew-loop can be started with minimal config.
 	RenewInterval string `yaml:"renew_interval" json:"renew_interval"`
+	// RetryBackoff is the initial wait duration before the first retry after a
+	// scheduled renew cycle fails.
+	RetryBackoff string `yaml:"retry_backoff" json:"retry_backoff"`
+	// MaxRetryBackoff caps the exponential retry backoff.
+	MaxRetryBackoff string `yaml:"max_retry_backoff" json:"max_retry_backoff"`
+	// MaxRetryAttempts limits how many retries happen after one scheduled cycle
+	// fails. Zero disables retries for that cycle.
+	MaxRetryAttempts *int `yaml:"max_retry_attempts" json:"max_retry_attempts"`
+	// FailureCommands run after each failed attempt. They receive ACME_LOOP_*
+	// environment variables so callers can send alerts to external systems.
+	FailureCommands []string `yaml:"failure_commands" json:"failure_commands"`
 }
 
 type CAConfig struct {

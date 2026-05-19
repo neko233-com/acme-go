@@ -44,6 +44,15 @@ certificates:
 	if cfg.Automation.RenewInterval != defaultAutomationRenewInterval {
 		t.Fatalf("unexpected default renew interval %q", cfg.Automation.RenewInterval)
 	}
+	if cfg.Automation.RetryBackoff != defaultAutomationRetryBackoff {
+		t.Fatalf("unexpected default retry backoff %q", cfg.Automation.RetryBackoff)
+	}
+	if cfg.Automation.MaxRetryBackoff != defaultAutomationMaxRetryBackoff {
+		t.Fatalf("unexpected default max retry backoff %q", cfg.Automation.MaxRetryBackoff)
+	}
+	if cfg.Automation.MaxRetryAttempts == nil || *cfg.Automation.MaxRetryAttempts != defaultAutomationMaxRetryAttempts {
+		t.Fatalf("unexpected default max retry attempts %v", cfg.Automation.MaxRetryAttempts)
+	}
 	if cfg.Certificates[0].OutputDir == "" {
 		t.Fatal("expected default output dir")
 	}
@@ -102,6 +111,35 @@ certificates:
 	}
 	if got := cfg.Certificates[0].Domains[0]; got != "test.neko233.com" {
 		t.Fatalf("expected local certificate override, got %q", got)
+	}
+}
+
+func TestLoadAllowsDisablingRetriesExplicitly(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := `account:
+  email: ops@example.com
+  accept_tos: true
+automation:
+  max_retry_attempts: 0
+dns:
+  provider: cloudflare
+certificates:
+  - name: example
+    domains:
+      - example.com
+`
+
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if cfg.Automation.MaxRetryAttempts == nil || *cfg.Automation.MaxRetryAttempts != 0 {
+		t.Fatalf("unexpected max retry attempts: %v", cfg.Automation.MaxRetryAttempts)
 	}
 }
 
@@ -194,5 +232,23 @@ func TestAutomationRenewIntervalDuration(t *testing.T) {
 
 	if _, err := (AutomationConfig{RenewInterval: "bad-duration"}).RenewIntervalDuration(); err == nil {
 		t.Fatal("expected invalid duration to fail")
+	}
+}
+
+func TestAutomationRetryDurations(t *testing.T) {
+	backoff, err := (AutomationConfig{RetryBackoff: "30s"}).RetryBackoffDuration()
+	if err != nil {
+		t.Fatalf("RetryBackoffDuration: %v", err)
+	}
+	if backoff != 30*time.Second {
+		t.Fatalf("retry_backoff: got %s want %s", backoff, 30*time.Second)
+	}
+
+	maxBackoff, err := (AutomationConfig{MaxRetryBackoff: "10m"}).MaxRetryBackoffDuration()
+	if err != nil {
+		t.Fatalf("MaxRetryBackoffDuration: %v", err)
+	}
+	if maxBackoff != 10*time.Minute {
+		t.Fatalf("max_retry_backoff: got %s want %s", maxBackoff, 10*time.Minute)
 	}
 }

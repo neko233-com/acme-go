@@ -34,6 +34,24 @@
         "renew_interval": {
           "type": "string",
           "description": "自动续期间隔，供 renew-loop/auto-renew 命令和库入口使用。支持 Go duration，例如 30m、6h、24h；默认按 24h 处理。"
+        },
+        "retry_backoff": {
+          "type": "string",
+          "description": "单次自动续期失败后的首次重试等待时间。支持 Go duration，例如 30s、1m；默认 1m。"
+        },
+        "max_retry_backoff": {
+          "type": "string",
+          "description": "指数退避的最大等待时间。支持 Go duration，例如 10m、15m；默认 15m。"
+        },
+        "max_retry_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "每轮定时续期失败后的最大重试次数。0 表示本轮失败后不重试，直接等待下一个 renew_interval。默认 5。"
+        },
+        "failure_commands": {
+          "type": "array",
+          "description": "每次自动续期失败后执行的告警命令，适合接入钉钉、企业微信、邮件或日志采集脚本。可读取 ACME_LOOP_* 环境变量。",
+          "items": { "type": "string" }
         }
       }
     },

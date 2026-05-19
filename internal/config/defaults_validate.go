@@ -18,6 +18,16 @@ func (c *Config) applyDefaults(configPath string) error {
 	if strings.TrimSpace(c.Automation.RenewInterval) == "" {
 		c.Automation.RenewInterval = defaultAutomationRenewInterval
 	}
+	if strings.TrimSpace(c.Automation.RetryBackoff) == "" {
+		c.Automation.RetryBackoff = defaultAutomationRetryBackoff
+	}
+	if strings.TrimSpace(c.Automation.MaxRetryBackoff) == "" {
+		c.Automation.MaxRetryBackoff = defaultAutomationMaxRetryBackoff
+	}
+	if c.Automation.MaxRetryAttempts == nil {
+		defaultRetryAttempts := defaultAutomationMaxRetryAttempts
+		c.Automation.MaxRetryAttempts = &defaultRetryAttempts
+	}
 	if c.DNS.Env == nil {
 		c.DNS.Env = map[string]string{}
 	}
@@ -75,6 +85,20 @@ func (c *Config) Validate() error {
 	}
 	if _, err := c.Automation.RenewIntervalDuration(); err != nil {
 		return err
+	}
+	if _, err := c.Automation.RetryBackoffDuration(); err != nil {
+		return err
+	}
+	if _, err := c.Automation.MaxRetryBackoffDuration(); err != nil {
+		return err
+	}
+	if *c.Automation.MaxRetryAttempts < 0 {
+		return fmt.Errorf("automation.max_retry_attempts must be greater than or equal to zero")
+	}
+	if retryBackoff, _ := c.Automation.RetryBackoffDuration(); retryBackoff > 0 {
+		if maxRetryBackoff, _ := c.Automation.MaxRetryBackoffDuration(); maxRetryBackoff < retryBackoff {
+			return fmt.Errorf("automation.max_retry_backoff must be greater than or equal to automation.retry_backoff")
+		}
 	}
 	if err := validateDNSConfig("dns", c.DNS, false); err != nil {
 		return err
@@ -145,15 +169,27 @@ func (c *Config) Validate() error {
 // RenewIntervalDuration parses the configured auto-renew interval.
 // An empty interval means no periodic renew loop is configured.
 func (a AutomationConfig) RenewIntervalDuration() (time.Duration, error) {
-	if strings.TrimSpace(a.RenewInterval) == "" {
+	return parseAutomationDuration("automation.renew_interval", a.RenewInterval)
+}
+
+func (a AutomationConfig) RetryBackoffDuration() (time.Duration, error) {
+	return parseAutomationDuration("automation.retry_backoff", a.RetryBackoff)
+}
+
+func (a AutomationConfig) MaxRetryBackoffDuration() (time.Duration, error) {
+	return parseAutomationDuration("automation.max_retry_backoff", a.MaxRetryBackoff)
+}
+
+func parseAutomationDuration(fieldName, value string) (time.Duration, error) {
+	if strings.TrimSpace(value) == "" {
 		return 0, nil
 	}
-	interval, err := time.ParseDuration(strings.TrimSpace(a.RenewInterval))
+	interval, err := time.ParseDuration(strings.TrimSpace(value))
 	if err != nil {
-		return 0, fmt.Errorf("automation.renew_interval must be a valid duration: %w", err)
+		return 0, fmt.Errorf("%s must be a valid duration: %w", fieldName, err)
 	}
 	if interval <= 0 {
-		return 0, fmt.Errorf("automation.renew_interval must be greater than zero")
+		return 0, fmt.Errorf("%s must be greater than zero", fieldName)
 	}
 	return interval, nil
 }

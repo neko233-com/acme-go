@@ -16,6 +16,19 @@ func (c *Config) merge(override Config) {
 	if override.Automation.RenewInterval != "" {
 		c.Automation.RenewInterval = override.Automation.RenewInterval
 	}
+	if override.Automation.RetryBackoff != "" {
+		c.Automation.RetryBackoff = override.Automation.RetryBackoff
+	}
+	if override.Automation.MaxRetryBackoff != "" {
+		c.Automation.MaxRetryBackoff = override.Automation.MaxRetryBackoff
+	}
+	if override.Automation.MaxRetryAttempts != nil {
+		value := *override.Automation.MaxRetryAttempts
+		c.Automation.MaxRetryAttempts = &value
+	}
+	if len(override.Automation.FailureCommands) > 0 {
+		c.Automation.FailureCommands = append([]string(nil), override.Automation.FailureCommands...)
+	}
 	mergeDNSConfig(&c.DNS, override.DNS)
 	if len(override.DNSProviders) > 0 {
 		if c.DNSProviders == nil {

@@ -1,0 +1,14 @@
+[Unit]
+Description=acme-go automatic renewal service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/etc/acme-go
+ExecStart=/usr/local/bin/acme-go auto-renew -config /etc/acme-go/config.yaml
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

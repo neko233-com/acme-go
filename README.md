@@ -16,6 +16,7 @@ Go 语言实现的配置驱动 ACME 自动化工具，设计目标参考 acme.sh
 - [Commands | 命令说明](#commands--命令说明)
 - [Challenge Modes | Challenge 模式](#challenge-modes--challenge-模式)
 - [Configuration | 配置模型](#configuration--配置模型)
+- [Persistent Service | 常驻服务](#persistent-service--常驻服务)
 - [Deploy Install Hooks | 安装部署与钩子](#deploy-install-hooks--安装部署与钩子)
 - [Supported Vendors | 支持的 DNS 厂商](#supported-vendors--支持的-dns-厂商)
 - [Testing and Spec | 测试与规范](#testing-and-spec--测试与规范)
@@ -189,7 +190,7 @@ go run . upgrade
 - `plan`: show whether a certificate entry would issue or skip.
 - `issue`: obtain a new certificate or replace an existing one.
 - `renew`: renew when the local certificate is near expiry or when `-force` is passed.
-- `renew-loop` / `auto-renew`: run renew immediately, then keep running on the configured schedule. They read `automation.renew_interval`, which defaults to `24h`, unless `-interval` overrides it. Use `-once` for a single renew cycle without the loop.
+- `renew-loop` / `auto-renew`: run renew immediately, then keep running on the configured schedule. They read `automation.renew_interval`, which defaults to `24h`, unless `-interval` overrides it. Failed runs are retried with exponential backoff before the loop falls back to the next scheduled interval. Use `-once` for a single renew cycle without the loop.
 - `revoke`: revoke the local certificate using the ACME server.
 - `install-cert`: copy local certificate files into configured install destinations.
 - `deploy`: run configured deploy targets using existing local certificate material.
@@ -204,7 +205,7 @@ go run . upgrade
 - `plan`：展示每个证书条目是会执行签发还是跳过。
 - `issue`：申请新证书，或覆盖已有本地证书。
 - `renew`：当证书接近过期时续期，也可配合 `-force` 强制执行。
-- `renew-loop` / `auto-renew`：先立即执行一次续期，然后按配置周期继续执行。默认读取 `automation.renew_interval`，未填写时按 `24h` 处理，也可以用 `-interval` 临时覆盖；`-once` 表示只执行一次后退出。
+- `renew-loop` / `auto-renew`：先立即执行一次续期，然后按配置周期继续执行。默认读取 `automation.renew_interval`，未填写时按 `24h` 处理，也可以用 `-interval` 临时覆盖；单次失败后会按指数退避重试，超过上限再回到下一轮定时周期；`-once` 表示只执行一次后退出。
 - `revoke`：通过 ACME 服务端吊销本地证书。
 - `install-cert`：将本地证书文件复制到配置的安装目标位置。
 - `deploy`：基于已有本地证书材料执行部署目标。
@@ -244,6 +245,14 @@ account:
 automation:
   # 自动续期间隔，不写时默认按 24h。
   renew_interval: 24h
+  # 首次重试等待时间，默认 1m。
+  retry_backoff: 1m
+  # 最大退避时间，默认 15m。
+  max_retry_backoff: 15m
+  # 每轮失败后最多重试 5 次；写 0 表示禁用重试。
+  max_retry_attempts: 5
+  # 每次失败后执行的告警命令；可读取 ACME_LOOP_* 环境变量。
+  failure_commands: []
 
 dns:
   env: {}
@@ -345,6 +354,33 @@ Local override example for `.local.json`:
 `config.schema.json` is included for editor validation. VS Code maps it to `config.yaml` and `config.*.yaml` through `.vscode/settings.json` when the YAML extension is installed.
 
 仓库内置 `config.schema.json` 用于编辑器校验。安装 YAML 扩展后，VS Code 会通过 `.vscode/settings.json` 将它关联到 `config.yaml` 与 `config.*.yaml`。
+
+`failure_commands` receives these environment variables on each failed auto-renew attempt: `ACME_LOOP_TARGET`, `ACME_LOOP_ATTEMPT`, `ACME_LOOP_MAX_RETRY_ATTEMPTS`, `ACME_LOOP_NEXT_RETRY`, `ACME_LOOP_INTERVAL`, `ACME_LOOP_FINAL_FAILURE`, `ACME_LOOP_ERROR`, and `ACME_LOOP_OCCURRED_AT`.
+
+`failure_commands` 在每次自动续期失败时都能读取这些环境变量：`ACME_LOOP_TARGET`、`ACME_LOOP_ATTEMPT`、`ACME_LOOP_MAX_RETRY_ATTEMPTS`、`ACME_LOOP_NEXT_RETRY`、`ACME_LOOP_INTERVAL`、`ACME_LOOP_FINAL_FAILURE`、`ACME_LOOP_ERROR`、`ACME_LOOP_OCCURRED_AT`。
+
+## Persistent Service | 常驻服务
+
+For Linux, use [install-systemd-service.sh](./install-systemd-service.sh) or the example unit file [examples/systemd/acme-go-auto-renew.service](./examples/systemd/acme-go-auto-renew.service):
+
+对于 Linux，可直接使用 [install-systemd-service.sh](./install-systemd-service.sh) 或示例 unit 文件 [examples/systemd/acme-go-auto-renew.service](./examples/systemd/acme-go-auto-renew.service)：
+
+```bash
+chmod +x install-systemd-service.sh
+./install-systemd-service.sh acme-go-auto-renew /etc/acme-go/config.yaml /usr/local/bin/acme-go
+```
+
+For Windows, acme-go is a console program, so [install-windows-service.cmd](./install-windows-service.cmd) installs it through `nssm` as a Windows Service wrapper:
+
+对于 Windows，由于 acme-go 本身是控制台程序，所以 [install-windows-service.cmd](./install-windows-service.cmd) 通过 `nssm` 将其包装为 Windows Service：
+
+```cmd
+install-windows-service.cmd acme-go-auto-renew C:\acme-go\config.yaml C:\acme-go\acme-go.exe
+```
+
+The recommended long-running command for both service styles is `auto-renew -config ...` because it now retries failed renew cycles with backoff and keeps the process alive for the next scheduled run.
+
+两种服务形式都推荐运行 `auto-renew -config ...`，因为它现在会在单次失败时自动重试和退避，并在失败后继续保活等待下一轮定时续期。
 
 ## Deploy Install Hooks | 安装部署与钩子
 
