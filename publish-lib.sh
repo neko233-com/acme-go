@@ -34,6 +34,11 @@ esac
 
 echo "Publishing library version $version"
 
+current_branch="$(git branch --show-current 2>/dev/null || true)"
+if [ -z "$current_branch" ]; then
+	current_branch="main"
+fi
+
 if ! git diff --quiet; then
 	echo "Working tree has unstaged changes. Commit or stash them before publishing." >&2
 	exit 1
@@ -51,6 +56,10 @@ fi
 go test ./pkg/acmego
 
 git tag -a "$version" -m "publish library $version"
+echo "Pushing branch $current_branch to origin..."
+git push origin "$current_branch"
+echo "Pushing tag $version to origin..."
 git push origin "$version"
 
 echo "Published $version to GitHub. Consumers can use: go get github.com/neko233-com/acme-go/pkg/acmego@$version"
+echo "已同步推送分支 $current_branch 和标签 $version。"

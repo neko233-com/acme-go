@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"time"
 
 	"github.com/neko233-com/acme-go/internal/acme"
 	"github.com/neko233-com/acme-go/internal/config"
@@ -59,6 +62,8 @@ func run(args []string) error {
 		return runIssue(args[1:], false)
 	case "renew":
 		return runIssue(args[1:], true)
+	case "renew-loop", "auto-renew", "watch":
+		return runRenewLoop(args[1:])
 	case "revoke":
 		return runRevoke(args[1:])
 	case "install-cert":
@@ -177,6 +182,58 @@ func runIssue(args []string, renewMode bool) error {
 		return errors.New("no certificate matched the selected name")
 	}
 	return nil
+}
+
+func runRenewLoop(args []string) error {
+	fs := flag.NewFlagSet("renew-loop", flag.ContinueOnError)
+	configPath := fs.String("config", "config.yaml", "path to config file")
+	name := fs.String("name", "", "renew only a single certificate entry")
+	force := fs.Bool("force", false, "force renewal on each scheduled run")
+	intervalValue := fs.String("interval", "", "override automation.renew_interval with a Go duration such as 30m or 24h")
+	runOnce := fs.Bool("once", false, "run one renew cycle immediately and exit")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		return err
+	}
+
+	if *runOnce {
+		_, err := acme.Run(cfg, acme.Options{Name: *name, Force: *force, Mode: acme.ModeRenew, Out: os.Stdout})
+		return err
+	}
+
+	var interval time.Duration
+	if *intervalValue != "" {
+		interval, err = time.ParseDuration(*intervalValue)
+		if err != nil {
+			return fmt.Errorf("parse -interval: %w", err)
+		}
+	} else {
+		interval, err = cfg.Automation.RenewIntervalDuration()
+		if err != nil {
+			return err
+		}
+	}
+
+	targetName := *name
+	if targetName == "" {
+		targetName = "all certificates"
+	}
+	fmt.Fprintf(os.Stdout, "starting renew loop for %s; interval=%s; press Ctrl+C to stop\n", targetName, interval)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	return acme.AutoRenewLoop(ctx, cfg, acme.AutoRenewOptions{
+		Name:           *name,
+		Force:          *force,
+		Interval:       interval,
+		RunImmediately: true,
+		Out:            os.Stdout,
+	})
 }
 
 func runList(args []string) error {
@@ -329,6 +386,8 @@ Usage:
   acme-go info   -config config.yaml -name example
   acme-go issue  -config config.yaml [-name example] [-force]
   acme-go renew  -config config.yaml [-name example] [-force]
+	acme-go renew-loop  -config config.yaml [-name example] [-force] [-interval 24h] [-once]
+	acme-go auto-renew  -config config.yaml [-name example] [-force] [-interval 24h] [-once]
   acme-go revoke -config config.yaml -name example
   acme-go install-cert -config config.yaml -name example
   acme-go deploy -config config.yaml -name example
@@ -358,6 +417,8 @@ func commandHelp(name string) (string, error) {
 		return "acme-go issue -config config.yaml [-name example] [-force]\nIssue a new certificate or replace an existing one.\n", nil
 	case "renew":
 		return "acme-go renew -config config.yaml [-name example] [-force]\nRenew certificates that are due, or force renewal.\n", nil
+	case "renew-loop", "auto-renew", "watch":
+		return "acme-go renew-loop -config config.yaml [-name example] [-force] [-interval 24h] [-once]\nAlias: auto-renew, watch. Run renew on a schedule. The interval defaults to automation.renew_interval, which falls back to 24h unless -interval overrides it. Use -once to run a single renew cycle and exit.\n", nil
 	case "revoke":
 		return "acme-go revoke -config config.yaml -name example\nRevoke a locally stored certificate through the ACME server.\n", nil
 	case "install-cert":

@@ -22,6 +22,9 @@ if /i "%VERSION:~0,1%" NEQ "v" set VERSION=v%VERSION%
 
 echo Publishing library version %VERSION%
 
+for /f "usebackq delims=" %%b in (`git branch --show-current`) do set CURRENT_BRANCH=%%b
+if "%CURRENT_BRANCH%"=="" set CURRENT_BRANCH=main
+
 git diff --quiet
 if errorlevel 1 (
 	echo Working tree has unstaged changes. Commit or stash them before publishing.
@@ -48,8 +51,14 @@ if errorlevel 1 exit /b 1
 git tag -a "%VERSION%" -m "publish library %VERSION%"
 if errorlevel 1 exit /b 1
 
+echo Pushing branch %CURRENT_BRANCH% to origin...
+git push origin "%CURRENT_BRANCH%"
+if errorlevel 1 exit /b 1
+
+echo Pushing tag %VERSION% to origin...
 git push origin "%VERSION%"
 if errorlevel 1 exit /b 1
 
 echo Published %VERSION% to GitHub. Consumers can use: go get github.com/neko233-com/acme-go/pkg/acmego@%VERSION%
+echo 已同步推送分支 %CURRENT_BRANCH% 和标签 %VERSION%。
 endlocal

@@ -12,6 +12,18 @@
     "want_error_contains": ""
   },
   {
+    "name": "help-renew-loop-command",
+    "args": ["help", "renew-loop"],
+    "require_config": false,
+    "want_error_contains": ""
+  },
+  {
+    "name": "help-auto-renew-command",
+    "args": ["help", "auto-renew"],
+    "require_config": false,
+    "want_error_contains": ""
+  },
+  {
     "name": "version-command",
     "args": ["version"],
     "require_config": false,

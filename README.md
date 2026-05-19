@@ -40,6 +40,7 @@ It currently focuses on the most common operational surface used in real deploym
 - DNS vendor strategy layout under `internal/dnsprovider/`, with one provider per subdirectory.
 - Challenge support for `dns-01`, `http-01`, `standalone`, `webroot`, and `tls-alpn-01`.
 - Lifecycle commands for `help`, `doc`, `validate`, `paths`, `plan`, `issue`, `renew`, `revoke`, `list`, `info`, `install-cert`, `deploy`, `version`, and `upgrade`.
+- Scheduled renewal support through `automation.renew_interval` plus the `renew-loop` and `auto-renew` commands and library helper.
 - Config merge with `.local.json` override so secrets stay out of Git.
 - Low-config DNS credentials mapping: use `dns.credentials` for common vendors and let acme-go derive vendor env vars.
 - Batch-friendly DNS model: declare multiple named providers once under `dns_providers`, then select them per certificate.
@@ -53,6 +54,7 @@ It currently focuses on the most common operational surface used in real deploym
 - DNS 厂商策略目录位于 `internal/dnsprovider/`，每个厂商一个独立子目录。
 - 支持 `dns-01`、`http-01`、`standalone`、`webroot`、`tls-alpn-01` 五类 challenge。
 - 支持 `help`、`doc`、`validate`、`paths`、`plan`、`issue`、`renew`、`revoke`、`list`、`info`、`install-cert`、`deploy`、`version`、`upgrade` 等生命周期命令。
+- 支持通过 `automation.renew_interval` 以及 `renew-loop`、`auto-renew` 命令执行周期自动续期。
 - 支持 `.local.json` 覆盖配置，便于将敏感信息与 Git 隔离。
 - 支持低配置 DNS 凭据模型，优先填写 `dns.credentials`，由 acme-go 自动映射到各厂商需要的环境变量。
 - 支持批量证书场景：可在 `dns_providers` 中集中声明多组 DNS provider，再按证书选择使用哪一组。
@@ -152,7 +154,11 @@ func RenewNginxCertificate() error {
 
 `DNSProviders` lets one process batch-manage certificates backed by different vendors or different regional accounts. `OutputDir` controls the directory. `OutputFiles` controls generated file names. Relative file names are resolved under `OutputDir`; absolute file paths are also accepted. Suggested nginx names are `server.crt` for fullchain, `server.key` for the private key, `server.pub` for the public key, `leaf.crt` for the leaf certificate, `ca.crt` for the issuer chain, and `acme.json` for renewal metadata.
 
+To keep renewals running automatically, start the scheduler with `go run . auto-renew -config config.yaml`. The loop runs one renew pass immediately and then repeats according to `automation.renew_interval`, which defaults to `24h` when omitted. Embedded Go services can call `acmego.AutoRenewLoop` with a `context.Context` for the same behavior.
+
 `DNSProviders` 让一个进程可以批量管理由不同厂商或不同地域账号托管的证书。`OutputDir` 用于指定目录，`OutputFiles` 用于指定生成文件名。相对路径会放在 `OutputDir` 下，绝对路径也可以直接使用。nginx GUI 场景建议用 `server.crt` 存 fullchain，`server.key` 存私钥，`server.pub` 存公钥，`leaf.crt` 存叶子证书，`ca.crt` 存签发链，`acme.json` 存续期元数据。
+
+如果希望进程持续自动续期，可以直接运行 `go run . auto-renew -config config.yaml`。它会先立刻跑一次续期，然后按照 `automation.renew_interval` 重复执行；如果你没写这个字段，默认按 `24h` 处理。作为 Go 二方库接入时，可使用 `acmego.AutoRenewLoop` 并通过 `context.Context` 控制退出。
 
 ## Commands | 命令说明
 
@@ -167,6 +173,8 @@ go run . list -config config.yaml
 go run . info -config config.yaml -name example-prod
 go run . issue -config config.yaml [-name example-prod] [-force]
 go run . renew -config config.yaml [-name example-prod] [-force]
+go run . renew-loop -config config.yaml [-name example-prod] [-force] [-interval 24h] [-once]
+go run . auto-renew -config config.yaml [-name example-prod] [-force] [-interval 24h] [-once]
 go run . revoke -config config.yaml -name example-prod
 go run . install-cert -config config.yaml -name example-prod
 go run . deploy -config config.yaml -name example-prod
@@ -181,6 +189,7 @@ go run . upgrade
 - `plan`: show whether a certificate entry would issue or skip.
 - `issue`: obtain a new certificate or replace an existing one.
 - `renew`: renew when the local certificate is near expiry or when `-force` is passed.
+- `renew-loop` / `auto-renew`: run renew immediately, then keep running on the configured schedule. They read `automation.renew_interval`, which defaults to `24h`, unless `-interval` overrides it. Use `-once` for a single renew cycle without the loop.
 - `revoke`: revoke the local certificate using the ACME server.
 - `install-cert`: copy local certificate files into configured install destinations.
 - `deploy`: run configured deploy targets using existing local certificate material.
@@ -195,6 +204,7 @@ go run . upgrade
 - `plan`：展示每个证书条目是会执行签发还是跳过。
 - `issue`：申请新证书，或覆盖已有本地证书。
 - `renew`：当证书接近过期时续期，也可配合 `-force` 强制执行。
+- `renew-loop` / `auto-renew`：先立即执行一次续期，然后按配置周期继续执行。默认读取 `automation.renew_interval`，未填写时按 `24h` 处理，也可以用 `-interval` 临时覆盖；`-once` 表示只执行一次后退出。
 - `revoke`：通过 ACME 服务端吊销本地证书。
 - `install-cert`：将本地证书文件复制到配置的安装目标位置。
 - `deploy`：基于已有本地证书材料执行部署目标。
@@ -230,6 +240,10 @@ account:
   email: ops@example.com
   key_path: .acme/account.pem
   accept_tos: true
+
+automation:
+  # 自动续期间隔，不写时默认按 24h。
+  renew_interval: 24h
 
 dns:
   env: {}
@@ -465,9 +479,9 @@ chmod +x publish-lib.sh
 ./publish-lib.sh v0.0.1
 ```
 
-The scripts run the non-integration test suite, verify `pkg/acmego`, create an annotated tag, and push it to GitHub. Consumers can then use:
+The scripts run the non-integration test suite, verify `pkg/acmego`, create an annotated tag, push the current branch, and then push the version tag to GitHub. Consumers can then use:
 
-脚本会运行非 integration 测试，验证 `pkg/acmego`，创建 annotated tag 并推送到 GitHub。其他项目随后可以使用：
+脚本会运行非 integration 测试，验证 `pkg/acmego`，创建 annotated tag，先推送当前分支，再推送版本 tag 到 GitHub。其他项目随后可以使用：
 
 ```bash
 go get github.com/neko233-com/acme-go/pkg/acmego@v0.0.1

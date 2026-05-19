@@ -1,6 +1,7 @@
 package acmego
 
 import (
+	"context"
 	"io"
 
 	"github.com/neko233-com/acme-go/internal/acme"
@@ -12,6 +13,7 @@ import (
 type Config = config.Config
 type CAConfig = config.CAConfig
 type AccountConfig = config.AccountConfig
+type AutomationConfig = config.AutomationConfig
 type DNSConfig = config.DNSConfig
 type CertificateSpec = config.CertificateSpec
 type CertificateFiles = config.CertificateFiles
@@ -29,6 +31,7 @@ const (
 
 type Options = acme.Options
 type Result = acme.Result
+type AutoRenewOptions = acme.AutoRenewOptions
 type Metadata = acme.Metadata
 type ConfigSummary = acme.ConfigSummary
 type CertificatePathInfo = acme.CertificatePathInfo
@@ -61,6 +64,10 @@ func Issue(cfg *Config, name string, force bool, out io.Writer) (Result, error) 
 
 func Renew(cfg *Config, name string, force bool, out io.Writer) (Result, error) {
 	return acme.Run(cfg, Options{Name: name, Force: force, Mode: ModeRenew, Out: out})
+}
+
+func AutoRenewLoop(ctx context.Context, cfg *Config, options AutoRenewOptions) error {
+	return acme.AutoRenewLoop(ctx, cfg, options)
 }
 
 func List(cfg *Config, out io.Writer) error {

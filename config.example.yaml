@@ -6,12 +6,17 @@ account:
   key_path: .acme/account.pem
   accept_tos: true
 
+automation:
+  # 自动续期间隔，支持 Go duration 写法，例如 30m、6h、24h。
+  # 大多数用户直接保留 24h 即可，再配合 `go run . auto-renew -config config.yaml` 长期运行。
+  renew_interval: 24h
+
 dns:
-  # Global defaults shared by all certificate entries unless they point at a named provider.
+  # 这里放所有证书共用的 DNS 默认值；如果证书显式绑定了命名 provider，会在这里的基础上继续覆盖。
   disable_cname_support: false
   disable_complete_propagation: false
   recursive_nameservers: []
-  # env still works and has higher priority when you need vendor-specific overrides.
+  # 如果某家云厂商还需要专用环境变量，也可以直接写在 env 里，优先级高于自动推导。
   env: {}
 
 dns_providers:
@@ -35,17 +40,17 @@ certificates:
       provider_ref: aliyun-cn
     output_dir: certs/example-prod
     output_files:
-      # Leaf certificate. Suggested names: cert.pem, tls.crt, server.crt.
+      # 叶子证书文件。常见命名：cert.pem、tls.crt、server.crt。
       cert_file: cert.pem
-      # Private key. Suggested names: privkey.pem, tls.key, server.key.
+      # 私钥文件。常见命名：privkey.pem、tls.key、server.key。
       key_file: privkey.pem
-      # Public key derived from the certificate. Suggested names: pubkey.pem, server.pub.
+      # 从证书导出的公钥文件。常见命名：pubkey.pem、server.pub。
       public_key_file: pubkey.pem
-      # Leaf + issuer chain. Suggested names: fullchain.pem, fullchain.crt, server.crt for nginx.
+      # fullchain，适合直接给 nginx 等服务使用。常见命名：fullchain.pem、fullchain.crt、server.crt。
       fullchain_file: fullchain.pem
-      # Issuer chain only. Suggested names: issuer.pem, chain.pem, ca.crt.
+      # 仅签发链。常见命名：issuer.pem、chain.pem、ca.crt。
       chain_file: issuer.pem
-      # Renewal metadata. Suggested names: metadata.json, acme.json.
+      # 续期元数据。常见命名：metadata.json、acme.json。
       metadata_file: metadata.json
     key_type: ec256
     preferred_chain: ""
@@ -69,6 +74,7 @@ certificates:
         directory: deploy/example-prod
       - name: reload-service
         type: command
+        # 证书落盘后执行你自己的重载命令，例如 nginx -s reload、systemctl reload nginx。
         command: echo reload-service
     hooks:
       pre_issue: []

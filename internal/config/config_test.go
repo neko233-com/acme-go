@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestLoadAppliesDefaultsAndEnvExpansion(t *testing.T) {
@@ -39,6 +40,9 @@ certificates:
 	}
 	if cfg.CA.DirectoryURL != defaultCADirectoryURL {
 		t.Fatalf("unexpected CA directory URL %q", cfg.CA.DirectoryURL)
+	}
+	if cfg.Automation.RenewInterval != defaultAutomationRenewInterval {
+		t.Fatalf("unexpected default renew interval %q", cfg.Automation.RenewInterval)
 	}
 	if cfg.Certificates[0].OutputDir == "" {
 		t.Fatal("expected default output dir")
@@ -176,5 +180,19 @@ func TestEffectiveDNSMergesGlobalNamedAndCertificateOverrides(t *testing.T) {
 	}
 	if effective.Env["ALICLOUD_SECRET_KEY"] != "provider-sk" {
 		t.Fatalf("secret key env: got %q", effective.Env["ALICLOUD_SECRET_KEY"])
+	}
+}
+
+func TestAutomationRenewIntervalDuration(t *testing.T) {
+	interval, err := (AutomationConfig{RenewInterval: "12h"}).RenewIntervalDuration()
+	if err != nil {
+		t.Fatalf("RenewIntervalDuration: %v", err)
+	}
+	if interval != 12*time.Hour {
+		t.Fatalf("interval: got %s want %s", interval, 12*time.Hour)
+	}
+
+	if _, err := (AutomationConfig{RenewInterval: "bad-duration"}).RenewIntervalDuration(); err == nil {
+		t.Fatal("expected invalid duration to fail")
 	}
 }

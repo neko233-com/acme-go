@@ -27,6 +27,16 @@
         "accept_tos": { "type": "boolean", "const": true }
       }
     },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "renew_interval": {
+          "type": "string",
+          "description": "自动续期间隔，供 renew-loop/auto-renew 命令和库入口使用。支持 Go duration，例如 30m、6h、24h；默认按 24h 处理。"
+        }
+      }
+    },
     "dns": { "$ref": "#/$defs/dnsConfig" },
     "dns_providers": {
       "type": "object",
@@ -45,7 +55,7 @@
       "properties": {
         "provider_ref": {
           "type": "string",
-          "description": "Reference a named entry from top-level dns_providers. Most useful inside certificates[].dns."
+          "description": "引用顶层 dns_providers 里定义的命名 provider，最常见写法是在 certificates[].dns.provider_ref 中复用。"
         },
         "provider": {
           "type": "string",
@@ -57,14 +67,14 @@
         },
         "region": {
           "type": "string",
-          "description": "Optional vendor region override. Example: cn-beijing or ap-singapore for Volcengine."
+          "description": "可选地域覆盖，例如火山引擎可写 cn-beijing、ap-singapore。"
         },
         "credentials": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "access_key": { "type": "string", "description": "Common access key field for AliCloud, Volcengine, AWS, Huawei Cloud and similar providers." },
-            "secret_key": { "type": "string", "description": "Common secret key field for AliCloud, Volcengine, AWS, Huawei Cloud and similar providers." },
+            "access_key": { "type": "string", "description": "通用 access key，适用于阿里云、火山引擎、AWS、华为云等厂商。" },
+            "secret_key": { "type": "string", "description": "通用 secret key，适用于阿里云、火山引擎、AWS、华为云等厂商。" },
             "secret_id": { "type": "string", "description": "Tencent-style secret id, also accepted as access key for compatible vendors." },
             "secret_token": { "type": "string", "description": "Optional session token for temporary credentials." },
             "username": { "type": "string", "description": "Username for providers like IBM Cloud SoftLayer." },
@@ -102,12 +112,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "cert_file": { "type": "string", "description": "Leaf certificate. Suggested: cert.pem, tls.crt, server.crt." },
-        "key_file": { "type": "string", "description": "Private key. Suggested: privkey.pem, tls.key, server.key." },
-        "public_key_file": { "type": "string", "description": "Public key. Suggested: pubkey.pem, server.pub." },
-        "fullchain_file": { "type": "string", "description": "Leaf plus issuer chain. Suggested: fullchain.pem, fullchain.crt, server.crt for nginx." },
-        "chain_file": { "type": "string", "description": "Issuer chain only. Suggested: issuer.pem, chain.pem, ca.crt." },
-        "metadata_file": { "type": "string", "description": "Renewal metadata. Suggested: metadata.json, acme.json." }
+        "cert_file": { "type": "string", "description": "叶子证书文件名，建议如 cert.pem、tls.crt、server.crt。" },
+        "key_file": { "type": "string", "description": "私钥文件名，建议如 privkey.pem、tls.key、server.key。" },
+        "public_key_file": { "type": "string", "description": "公钥文件名，建议如 pubkey.pem、server.pub。" },
+        "fullchain_file": { "type": "string", "description": "fullchain 文件名，建议如 fullchain.pem、fullchain.crt、server.crt。" },
+        "chain_file": { "type": "string", "description": "签发链文件名，建议如 issuer.pem、chain.pem、ca.crt。" },
+        "metadata_file": { "type": "string", "description": "续期元数据文件名，建议如 metadata.json、acme.json。" }
       }
     },
     "installConfig": {
