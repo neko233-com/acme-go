@@ -20,8 +20,10 @@ Use this skill whenever an agent changes GitHub Actions, VS Code task wiring, re
 2. Run workflow linting:
 
    ```powershell
-   go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/ci.yml .github/workflows/publish-lib.yml .github/workflows/release.yml
+   powershell -ExecutionPolicy Bypass -File scripts/validate-github-actions.ps1
    ```
+
+   The script runs actionlint with ShellCheck enabled. On Windows it bootstraps a project-local ShellCheck binary under `.cache/tools/` when no global `shellcheck` is available.
 
 3. Run config validation:
 

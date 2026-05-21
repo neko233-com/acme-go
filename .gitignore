@@ -3,6 +3,7 @@ certs/
 output_SSL/
 dist/
 bin/
+.cache/
 coverage.out
 config_acme.local.json
 config.yaml

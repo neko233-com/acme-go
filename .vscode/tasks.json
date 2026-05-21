@@ -32,7 +32,7 @@
     {
       "label": "validate: github actions",
       "type": "shell",
-      "command": "go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/ci.yml .github/workflows/publish-lib.yml .github/workflows/release.yml",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/validate-github-actions.ps1",
       "group": "test",
       "problemMatcher": []
     }

@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           cd dist-artifacts
-          sha256sum * > SHA256SUMS
+          sha256sum ./* > SHA256SUMS
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
