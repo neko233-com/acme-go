@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>acme-go 使用说明</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; line-height: 1.65; margin: 0; color: #172033; background: #f7f8fb; }
+    main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 56px; }
+    h1, h2, h3 { line-height: 1.25; color: #111827; }
+    section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 18px 0; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    pre { overflow: auto; background: #111827; color: #f9fafb; padding: 14px; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    th, td { border: 1px solid #d1d5db; padding: 8px; vertical-align: top; }
+    th { background: #f3f4f6; text-align: left; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>acme-go 使用说明</h1>
+  <p>acme-go 通过 ACME 协议申请和续期免费 SSL 证书。主配置是 <code>config_acme.json</code>，DNS 密钥等私密信息放在 <code>config_acme.local.json</code>。</p>
+
+  <section>
+    <h2>快速开始</h2>
+    <ol>
+      <li>确认你的域名托管在哪一家 DNS 云厂商。</li>
+      <li>在云厂商后台创建可修改 DNS TXT 记录的 API token 或 access key。</li>
+      <li>把证书域名、输出目录、DNS provider 写入 <code>config_acme.json</code>。</li>
+      <li>把私密凭据写入 <code>config_acme.local.json</code>。</li>
+      <li>运行 <code>acme-go validate -config config_acme.json</code> 检查配置。</li>
+      <li>运行 <code>acme-go issue -config config_acme.json -name neko233-staging</code> 申请证书。</li>
+    </ol>
+    <pre><code>acme-go providers
+acme-go validate -config config_acme.json
+acme-go paths -config config_acme.json -name neko233-staging
+acme-go issue -config config_acme.json -name neko233-staging</code></pre>
+  </section>
+
+  <section>
+    <h2>已准备好的域名</h2>
+    <p>当前准备好的泛域名证书条目是 <code>neko233-staging</code>，域名写作 <code>_.neko2public.online</code>，这里用下划线表示通配符，方便作为 Windows/Linux/macOS 都能落盘的目录名。输出目录是：</p>
+    <pre><code>output_SSL/_.neko2public.online/</code></pre>
+    <p>申请成功后会得到 <code>cert.pem</code>、<code>privkey.pem</code>、<code>pubkey.pem</code>、<code>fullchain.pem</code>、<code>issuer.pem</code> 和 <code>metadata.json</code>。</p>
+  </section>
+
+  <section>
+    <h2>证书如何使用</h2>
+    <h3>nginx</h3>
+    <pre><code>ssl_certificate     /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem;
+ssl_certificate_key /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem;</code></pre>
+    <h3>Caddy</h3>
+    <pre><code>tls /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem</code></pre>
+    <h3>Windows 或图形化面板</h3>
+    <p>一般选择 <code>fullchain.pem</code> 作为证书链，选择 <code>privkey.pem</code> 作为私钥。<code>output_SSL/</code> 适合备份，但不要提交到 Git。</p>
+  </section>
+
+  <section>
+    <h2>各云厂商凭据字段</h2>
+    <p>可以优先填写 <code>dns.credentials</code>，acme-go 会自动映射成 lego DNS provider 需要的环境变量；如果你在 <code>dns.env</code> 里显式写了环境变量，则显式值优先。</p>
+    <table>
+      <thead><tr><th>厂商</th><th>常用别名</th><th>配置字段</th><th>自动映射环境变量</th></tr></thead>
+      <tbody>
+        <tr><td>阿里云 AliDNS</td><td>alidns, aliyun, alicloud-cn, alicloud-intl</td><td><code>access_key</code>, <code>secret_key</code></td><td><code>ALICLOUD_ACCESS_KEY</code>, <code>ALICLOUD_SECRET_KEY</code></td></tr>
+        <tr><td>AWS Route53</td><td>aws, route53</td><td><code>access_key</code> 或 <code>secret_id</code>, <code>secret_key</code>, 可选 <code>secret_token</code>, <code>region</code></td><td><code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SESSION_TOKEN</code>, <code>AWS_REGION</code></td></tr>
+        <tr><td>Azure DNS</td><td>azure, azuredns</td><td><code>subscription_id</code>, <code>tenant_id</code>, <code>client_id</code>, <code>client_secret</code>, <code>resource_group</code></td><td><code>AZURE_SUBSCRIPTION_ID</code>, <code>AZURE_TENANT_ID</code>, <code>AZURE_CLIENT_ID</code>, <code>AZURE_CLIENT_SECRET</code>, <code>AZURE_RESOURCE_GROUP</code></td></tr>
+        <tr><td>百度智能云</td><td>baiducloud, baidudns</td><td><code>access_key</code> 或 <code>secret_id</code>, <code>secret_key</code></td><td><code>BAIDUCLOUD_ACCESS_KEY_ID</code>, <code>BAIDUCLOUD_SECRET_ACCESS_KEY</code></td></tr>
+        <tr><td>Cloudflare</td><td>cloudflare, cf</td><td><code>api_token</code> 或 <code>api_key</code>, 可选 <code>api_email</code></td><td><code>CLOUDFLARE_DNS_API_TOKEN</code>, <code>CLOUDFLARE_EMAIL</code></td></tr>
+        <tr><td>DigitalOcean</td><td>digitalocean, do</td><td><code>api_token</code> 或 <code>api_key</code></td><td><code>DO_AUTH_TOKEN</code></td></tr>
+        <tr><td>Google Cloud DNS</td><td>gcloud, gcp, google</td><td><code>project_id</code>, <code>service_account_file</code></td><td><code>GCE_PROJECT</code>, <code>GOOGLE_APPLICATION_CREDENTIALS</code></td></tr>
+        <tr><td>Hetzner DNS</td><td>hetzner, hcloud</td><td><code>api_token</code> 或 <code>api_key</code></td><td><code>HETZNER_API_TOKEN</code></td></tr>
+        <tr><td>华为云 DNS</td><td>huaweicloud, huawei</td><td><code>access_key</code> 或 <code>secret_id</code>, <code>secret_key</code>, <code>region</code></td><td><code>HUAWEICLOUD_ACCESS_KEY_ID</code>, <code>HUAWEICLOUD_SECRET_ACCESS_KEY</code>, <code>HUAWEICLOUD_REGION</code></td></tr>
+        <tr><td>IBM Cloud / SoftLayer</td><td>ibmcloud, softlayer</td><td><code>username</code>, <code>api_key</code> 或 <code>api_token</code></td><td><code>SOFTLAYER_USERNAME</code>, <code>SOFTLAYER_API_KEY</code></td></tr>
+        <tr><td>Linode</td><td>linode</td><td><code>api_token</code> 或 <code>api_key</code></td><td><code>LINODE_TOKEN</code></td></tr>
+        <tr><td>Oracle Cloud DNS</td><td>oraclecloud, oci</td><td><code>compartment_id</code>, <code>tenancy_id</code>, <code>user_id</code>, <code>fingerprint</code>, <code>private_key_file</code>, 可选 <code>private_key_pass</code>, <code>region</code></td><td><code>OCI_COMPARTMENT_OCID</code>, <code>OCI_TENANCY_OCID</code>, <code>OCI_USER_OCID</code>, <code>OCI_PUBKEY_FINGERPRINT</code>, <code>OCI_PRIVKEY_FILE</code>, <code>OCI_PRIVKEY_PASS</code>, <code>OCI_REGION</code></td></tr>
+        <tr><td>Scaleway</td><td>scaleway, scw</td><td><code>api_token</code> 或 <code>secret_key</code> 或 <code>api_key</code>, <code>project_id</code></td><td><code>SCALEWAY_API_TOKEN</code>, <code>SCALEWAY_PROJECT_ID</code></td></tr>
+        <tr><td>腾讯云 DNSPod</td><td>tencentcloud, dnspod</td><td><code>secret_id</code> 或 <code>access_key</code>, <code>secret_key</code>, 可选 <code>secret_token</code></td><td><code>TENCENTCLOUD_SECRET_ID</code>, <code>TENCENTCLOUD_SECRET_KEY</code>, <code>TENCENTCLOUD_SESSION_TOKEN</code></td></tr>
+        <tr><td>UCloud</td><td>ucloud</td><td><code>access_key</code> 或 <code>secret_id</code>, <code>secret_key</code>, 可选 <code>region</code>, <code>project_id</code></td><td><code>UCLOUD_PUBLIC_KEY</code>, <code>UCLOUD_PRIVATE_KEY</code>, <code>UCLOUD_REGION</code>, <code>UCLOUD_PROJECT_ID</code></td></tr>
+        <tr><td>Vultr DNS</td><td>vultr</td><td><code>api_key</code> 或 <code>api_token</code></td><td><code>VULTR_API_KEY</code></td></tr>
+        <tr><td>火山引擎 DNS</td><td>volcengine, volc</td><td><code>access_key</code>, <code>secret_key</code>, 可选 <code>region</code> 或 <code>account_mode</code></td><td><code>VOLC_ACCESSKEY</code>, <code>VOLC_SECRETKEY</code>, <code>VOLC_REGION</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>本地密钥文件示例</h2>
+    <pre><code>{
+  "account": { "email": "ops@example.com" },
+  "dns_providers": {
+    "aliyun-cn": {
+      "credentials": {
+        "access_key": "your-access-key",
+        "secret_key": "your-secret-key"
+      }
+    }
+  }
+}</code></pre>
+  </section>
+</main>
+</body>
+</html>

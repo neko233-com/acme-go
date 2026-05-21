@@ -6,6 +6,7 @@ Go 语言实现的配置驱动 ACME 自动化工具，设计目标参考 acme.sh
 
 - English HTML guide: [how-to-use.html](./how-to-use.html)
 - 中文 HTML 使用说明: [how-to-use.html](./how-to-use.html)
+- Release package docs: [_doc/usage-en.html](_doc/usage-en.html) and [_doc/usage-zh.html](_doc/usage-zh.html)
 
 ## Table of Contents | 目录
 

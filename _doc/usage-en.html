@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>acme-go Usage Guide</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.55; margin: 0; color: #172033; background: #f7f8fb; }
+    main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 56px; }
+    h1, h2, h3 { line-height: 1.2; color: #111827; }
+    section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 18px 0; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    pre { overflow: auto; background: #111827; color: #f9fafb; padding: 14px; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    th, td { border: 1px solid #d1d5db; padding: 8px; vertical-align: top; }
+    th { background: #f3f4f6; text-align: left; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>acme-go Usage Guide</h1>
+  <p>acme-go obtains and renews free SSL certificates through ACME. It is driven by <code>config_acme.json</code>, and private DNS credentials should be placed in <code>config_acme.local.json</code>.</p>
+
+  <section>
+    <h2>Quick Start</h2>
+    <ol>
+      <li>Choose a supported DNS provider that hosts your domain.</li>
+      <li>Create an API token or access key with permission to edit DNS TXT records.</li>
+      <li>Put public certificate settings in <code>config_acme.json</code>.</li>
+      <li>Put private credentials in <code>config_acme.local.json</code>.</li>
+      <li>Run <code>acme-go validate -config config_acme.json</code>.</li>
+      <li>Run <code>acme-go issue -config config_acme.json -name neko233-staging</code>.</li>
+    </ol>
+    <pre><code>acme-go providers
+acme-go validate -config config_acme.json
+acme-go paths -config config_acme.json -name neko233-staging
+acme-go issue -config config_acme.json -name neko233-staging</code></pre>
+  </section>
+
+  <section>
+    <h2>Prepared Domain</h2>
+    <p>The prepared wildcard test certificate entry is <code>neko233-staging</code>. It requests <code>_.neko2public.online</code>, which represents the wildcard domain for local filesystem-safe output. The output directory is:</p>
+    <pre><code>output_SSL/_.neko2public.online/</code></pre>
+    <p>After issuance, the directory contains <code>cert.pem</code>, <code>privkey.pem</code>, <code>pubkey.pem</code>, <code>fullchain.pem</code>, <code>issuer.pem</code>, and <code>metadata.json</code>.</p>
+  </section>
+
+  <section>
+    <h2>Using the Certificate</h2>
+    <h3>nginx</h3>
+    <pre><code>ssl_certificate     /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem;
+ssl_certificate_key /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem;</code></pre>
+    <h3>Caddy</h3>
+    <pre><code>tls /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem</code></pre>
+    <h3>Windows or GUI tools</h3>
+    <p>Use <code>fullchain.pem</code> as the certificate chain and <code>privkey.pem</code> as the private key. Keep <code>output_SSL/</code> backed up but do not commit it to Git.</p>
+  </section>
+
+  <section>
+    <h2>Provider Credential Fields</h2>
+    <p>You can use <code>dns.credentials</code> or put exact environment variables under <code>dns.env</code>. Explicit <code>env</code> values win over derived values.</p>
+    <table>
+      <thead><tr><th>Provider</th><th>Useful aliases</th><th>Credential fields</th><th>Derived environment variables</th></tr></thead>
+      <tbody>
+        <tr><td>Alicloud / AliDNS</td><td>alidns, aliyun, alicloud-cn, alicloud-intl</td><td><code>access_key</code>, <code>secret_key</code></td><td><code>ALICLOUD_ACCESS_KEY</code>, <code>ALICLOUD_SECRET_KEY</code></td></tr>
+        <tr><td>AWS Route53</td><td>aws, route53</td><td><code>access_key</code> or <code>secret_id</code>, <code>secret_key</code>, optional <code>secret_token</code>, <code>region</code></td><td><code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SESSION_TOKEN</code>, <code>AWS_REGION</code></td></tr>
+        <tr><td>Azure DNS</td><td>azure, azuredns</td><td><code>subscription_id</code>, <code>tenant_id</code>, <code>client_id</code>, <code>client_secret</code>, <code>resource_group</code></td><td><code>AZURE_SUBSCRIPTION_ID</code>, <code>AZURE_TENANT_ID</code>, <code>AZURE_CLIENT_ID</code>, <code>AZURE_CLIENT_SECRET</code>, <code>AZURE_RESOURCE_GROUP</code></td></tr>
+        <tr><td>Baidu Cloud</td><td>baiducloud, baidudns</td><td><code>access_key</code> or <code>secret_id</code>, <code>secret_key</code></td><td><code>BAIDUCLOUD_ACCESS_KEY_ID</code>, <code>BAIDUCLOUD_SECRET_ACCESS_KEY</code></td></tr>
+        <tr><td>Cloudflare</td><td>cloudflare, cf</td><td><code>api_token</code> or <code>api_key</code>, optional <code>api_email</code></td><td><code>CLOUDFLARE_DNS_API_TOKEN</code>, <code>CLOUDFLARE_EMAIL</code></td></tr>
+        <tr><td>DigitalOcean</td><td>digitalocean, do</td><td><code>api_token</code> or <code>api_key</code></td><td><code>DO_AUTH_TOKEN</code></td></tr>
+        <tr><td>Google Cloud DNS</td><td>gcloud, gcp, google</td><td><code>project_id</code>, <code>service_account_file</code></td><td><code>GCE_PROJECT</code>, <code>GOOGLE_APPLICATION_CREDENTIALS</code></td></tr>
+        <tr><td>Hetzner DNS</td><td>hetzner, hcloud</td><td><code>api_token</code> or <code>api_key</code></td><td><code>HETZNER_API_TOKEN</code></td></tr>
+        <tr><td>Huawei Cloud DNS</td><td>huaweicloud, huawei</td><td><code>access_key</code> or <code>secret_id</code>, <code>secret_key</code>, <code>region</code></td><td><code>HUAWEICLOUD_ACCESS_KEY_ID</code>, <code>HUAWEICLOUD_SECRET_ACCESS_KEY</code>, <code>HUAWEICLOUD_REGION</code></td></tr>
+        <tr><td>IBM Cloud / SoftLayer</td><td>ibmcloud, softlayer</td><td><code>username</code>, <code>api_key</code> or <code>api_token</code></td><td><code>SOFTLAYER_USERNAME</code>, <code>SOFTLAYER_API_KEY</code></td></tr>
+        <tr><td>Linode</td><td>linode</td><td><code>api_token</code> or <code>api_key</code></td><td><code>LINODE_TOKEN</code></td></tr>
+        <tr><td>Oracle Cloud DNS</td><td>oraclecloud, oci</td><td><code>compartment_id</code>, <code>tenancy_id</code>, <code>user_id</code>, <code>fingerprint</code>, <code>private_key_file</code>, optional <code>private_key_pass</code>, <code>region</code></td><td><code>OCI_COMPARTMENT_OCID</code>, <code>OCI_TENANCY_OCID</code>, <code>OCI_USER_OCID</code>, <code>OCI_PUBKEY_FINGERPRINT</code>, <code>OCI_PRIVKEY_FILE</code>, <code>OCI_PRIVKEY_PASS</code>, <code>OCI_REGION</code></td></tr>
+        <tr><td>Scaleway</td><td>scaleway, scw</td><td><code>api_token</code> or <code>secret_key</code> or <code>api_key</code>, <code>project_id</code></td><td><code>SCALEWAY_API_TOKEN</code>, <code>SCALEWAY_PROJECT_ID</code></td></tr>
+        <tr><td>Tencent Cloud DNSPod</td><td>tencentcloud, dnspod</td><td><code>secret_id</code> or <code>access_key</code>, <code>secret_key</code>, optional <code>secret_token</code></td><td><code>TENCENTCLOUD_SECRET_ID</code>, <code>TENCENTCLOUD_SECRET_KEY</code>, <code>TENCENTCLOUD_SESSION_TOKEN</code></td></tr>
+        <tr><td>UCloud DNS</td><td>ucloud</td><td><code>access_key</code> or <code>secret_id</code>, <code>secret_key</code>, optional <code>region</code>, <code>project_id</code></td><td><code>UCLOUD_PUBLIC_KEY</code>, <code>UCLOUD_PRIVATE_KEY</code>, <code>UCLOUD_REGION</code>, <code>UCLOUD_PROJECT_ID</code></td></tr>
+        <tr><td>Vultr DNS</td><td>vultr</td><td><code>api_key</code> or <code>api_token</code></td><td><code>VULTR_API_KEY</code></td></tr>
+        <tr><td>Volcengine DNS</td><td>volcengine, volc</td><td><code>access_key</code>, <code>secret_key</code>, optional <code>region</code> or <code>account_mode</code></td><td><code>VOLC_ACCESSKEY</code>, <code>VOLC_SECRETKEY</code>, <code>VOLC_REGION</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Example Local Secret File</h2>
+    <pre><code>{
+  "account": { "email": "ops@example.com" },
+  "dns_providers": {
+    "aliyun-cn": {
+      "credentials": {
+        "access_key": "your-access-key",
+        "secret_key": "your-secret-key"
+      }
+    }
+  }
+}</code></pre>
+  </section>
+</main>
+</body>
+</html>
