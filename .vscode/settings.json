@@ -1,11 +1,15 @@
 {
-  "yaml.schemas": {
-    "./config.schema.json": [
-      "config.yaml",
-      "config.*.yaml"
-    ]
-  },
-  "yaml.validate": true,
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "/config_acme.json",
+        "/config_acme.local.json",
+        "/config_acme.test.json",
+        "/config_acme.test.local.json"
+      ],
+      "url": "./config.schema.json"
+    }
+  ],
   "gopls": {
     "build.buildFlags": [
       "-tags=integration"

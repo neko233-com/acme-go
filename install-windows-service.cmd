@@ -6,7 +6,7 @@ set CONFIG_PATH=%~2
 set BINARY_PATH=%~3
 
 if "%SERVICE_NAME%"=="" set SERVICE_NAME=acme-go-auto-renew
-if "%CONFIG_PATH%"=="" set CONFIG_PATH=%CD%\config.yaml
+if "%CONFIG_PATH%"=="" set CONFIG_PATH=%CD%\config_acme.json
 if "%BINARY_PATH%"=="" set BINARY_PATH=%CD%\acme-go.exe
 
 where nssm >nul 2>nul

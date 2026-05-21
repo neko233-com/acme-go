@@ -19,12 +19,12 @@ if "%RUN_INTEGRATION%"=="0" (
 	goto success
 )
 
-if exist .local.json (
+if exist config_acme.local.json (
 	echo [3/4] Running integration tests...
 	go test -tags=integration -timeout 20m ./...
 	if errorlevel 1 goto fail
 ) else (
-	echo [3/4] Skipping integration tests because .local.json was not found.
+	echo [3/4] Skipping integration tests because config_acme.local.json was not found.
 )
 
 :success

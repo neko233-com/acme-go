@@ -26,6 +26,8 @@ var (
 	autoUpdate     = update.MaybeAutoUpdate
 )
 
+const defaultConfigPath = "config_acme.json"
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -109,7 +111,7 @@ func runHelp(args []string) error {
 
 func runValidate(args []string) error {
 	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -122,7 +124,7 @@ func runValidate(args []string) error {
 
 func runPlan(args []string) error {
 	fs := flag.NewFlagSet("plan", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "issue or inspect only a single certificate entry")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -138,7 +140,7 @@ func runPlan(args []string) error {
 
 func runPaths(args []string) error {
 	fs := flag.NewFlagSet("paths", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "show paths only for a single certificate entry")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -152,7 +154,7 @@ func runPaths(args []string) error {
 
 func runIssue(args []string, renewMode bool) error {
 	fs := flag.NewFlagSet("issue", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "issue or renew only a single certificate entry")
 	force := fs.Bool("force", false, "force issuing even if the current certificate is still valid")
 	if err := fs.Parse(args); err != nil {
@@ -186,7 +188,7 @@ func runIssue(args []string, renewMode bool) error {
 
 func runRenewLoop(args []string) error {
 	fs := flag.NewFlagSet("renew-loop", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "renew only a single certificate entry")
 	force := fs.Bool("force", false, "force renewal on each scheduled run")
 	intervalValue := fs.String("interval", "", "override automation.renew_interval with a Go duration such as 30m or 24h")
@@ -238,7 +240,7 @@ func runRenewLoop(args []string) error {
 
 func runList(args []string) error {
 	fs := flag.NewFlagSet("list", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -251,7 +253,7 @@ func runList(args []string) error {
 
 func runInfo(args []string) error {
 	fs := flag.NewFlagSet("info", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "certificate entry name")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -268,7 +270,7 @@ func runInfo(args []string) error {
 
 func runRevoke(args []string) error {
 	fs := flag.NewFlagSet("revoke", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "certificate entry name")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -285,7 +287,7 @@ func runRevoke(args []string) error {
 
 func runInstallCert(args []string) error {
 	fs := flag.NewFlagSet("install-cert", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "certificate entry name")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -302,7 +304,7 @@ func runInstallCert(args []string) error {
 
 func runDeploy(args []string) error {
 	fs := flag.NewFlagSet("deploy", flag.ContinueOnError)
-	configPath := fs.String("config", "config.yaml", "path to config file")
+	configPath := fs.String("config", defaultConfigPath, "path to config file")
 	name := fs.String("name", "", "certificate entry name")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -379,18 +381,18 @@ func printUsage() {
 Usage:
 	acme-go help [command]
 	acme-go doc [-print-path]
-	acme-go validate -config config.yaml
-  acme-go plan   -config config.yaml
-	acme-go paths  -config config.yaml [-name example]
-  acme-go list   -config config.yaml
-  acme-go info   -config config.yaml -name example
-  acme-go issue  -config config.yaml [-name example] [-force]
-  acme-go renew  -config config.yaml [-name example] [-force]
-	acme-go renew-loop  -config config.yaml [-name example] [-force] [-interval 24h] [-once]
-	acme-go auto-renew  -config config.yaml [-name example] [-force] [-interval 24h] [-once]
-  acme-go revoke -config config.yaml -name example
-  acme-go install-cert -config config.yaml -name example
-  acme-go deploy -config config.yaml -name example
+	acme-go validate -config config_acme.json
+	acme-go plan   -config config_acme.json
+	acme-go paths  -config config_acme.json [-name example]
+	acme-go list   -config config_acme.json
+	acme-go info   -config config_acme.json -name example
+	acme-go issue  -config config_acme.json [-name example] [-force]
+	acme-go renew  -config config_acme.json [-name example] [-force]
+	acme-go renew-loop  -config config_acme.json [-name example] [-force] [-interval 24h] [-once]
+	acme-go auto-renew  -config config_acme.json [-name example] [-force] [-interval 24h] [-once]
+	acme-go revoke -config config_acme.json -name example
+	acme-go install-cert -config config_acme.json -name example
+	acme-go deploy -config config_acme.json -name example
   acme-go providers
   acme-go version
 	acme-go upgrade
@@ -404,27 +406,27 @@ func commandHelp(name string) (string, error) {
 	case "doc":
 		return "acme-go doc [-print-path]\nOpen how-to-use.html in the default browser, or print its resolved path.\n", nil
 	case "validate":
-		return "acme-go validate -config config.yaml\nLoad config, merge .local.json, apply defaults, and print a JSON summary.\n", nil
+		return "acme-go validate -config config_acme.json\nLoad config, merge <name>.local.json, apply defaults, and print a JSON summary.\n", nil
 	case "plan":
-		return "acme-go plan -config config.yaml [-name example]\nShow which certificates would issue or skip based on local state.\n", nil
+		return "acme-go plan -config config_acme.json [-name example]\nShow which certificates would issue or skip based on local state.\n", nil
 	case "paths":
-		return "acme-go paths -config config.yaml [-name example]\nPrint resolved output paths for certificate files.\n", nil
+		return "acme-go paths -config config_acme.json [-name example]\nPrint resolved output paths for certificate files.\n", nil
 	case "list":
-		return "acme-go list -config config.yaml\nList all configured certificates and their current status.\n", nil
+		return "acme-go list -config config_acme.json\nList all configured certificates and their current status.\n", nil
 	case "info":
-		return "acme-go info -config config.yaml -name example\nShow detailed information for a single certificate entry.\n", nil
+		return "acme-go info -config config_acme.json -name example\nShow detailed information for a single certificate entry.\n", nil
 	case "issue":
-		return "acme-go issue -config config.yaml [-name example] [-force]\nIssue a new certificate or replace an existing one.\n", nil
+		return "acme-go issue -config config_acme.json [-name example] [-force]\nIssue a new certificate or replace an existing one.\n", nil
 	case "renew":
-		return "acme-go renew -config config.yaml [-name example] [-force]\nRenew certificates that are due, or force renewal.\n", nil
+		return "acme-go renew -config config_acme.json [-name example] [-force]\nRenew certificates that are due, or force renewal.\n", nil
 	case "renew-loop", "auto-renew", "watch":
-		return "acme-go renew-loop -config config.yaml [-name example] [-force] [-interval 24h] [-once]\nAlias: auto-renew, watch. Run renew on a schedule. The interval defaults to automation.renew_interval, which falls back to 24h unless -interval overrides it. Use -once to run a single renew cycle and exit.\n", nil
+		return "acme-go renew-loop -config config_acme.json [-name example] [-force] [-interval 24h] [-once]\nAlias: auto-renew, watch. Run renew on a schedule. The interval defaults to automation.renew_interval, which falls back to 24h unless -interval overrides it. Use -once to run a single renew cycle and exit.\n", nil
 	case "revoke":
-		return "acme-go revoke -config config.yaml -name example\nRevoke a locally stored certificate through the ACME server.\n", nil
+		return "acme-go revoke -config config_acme.json -name example\nRevoke a locally stored certificate through the ACME server.\n", nil
 	case "install-cert":
-		return "acme-go install-cert -config config.yaml -name example\nCopy generated certificate files into configured install destinations.\n", nil
+		return "acme-go install-cert -config config_acme.json -name example\nCopy generated certificate files into configured install destinations.\n", nil
 	case "deploy":
-		return "acme-go deploy -config config.yaml -name example\nRun configured deploy targets with existing local certificate material.\n", nil
+		return "acme-go deploy -config config_acme.json -name example\nRun configured deploy targets with existing local certificate material.\n", nil
 	case "providers":
 		return "acme-go providers\nPrint supported DNS providers and aliases as JSON.\n", nil
 	case "version":

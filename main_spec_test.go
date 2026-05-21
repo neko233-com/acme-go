@@ -58,10 +58,14 @@ func TestCommandDispatchSpecs(t *testing.T) {
 
 func writeCommandConfig(t *testing.T) string {
 	t.Helper()
+	t.Setenv("ACME_EMAIL", "ops@example.com")
 	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.yaml")
-	content := "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  provider: cloudflare\ncertificates:\n  - name: example\n    domains:\n      - example.com\n"
-	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
+	configPath := filepath.Join(dir, "config_acme.json")
+	content, err := os.ReadFile("config_acme.test.json")
+	if err != nil {
+		t.Fatalf("read test config: %v", err)
+	}
+	if err := os.WriteFile(configPath, content, 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 	return configPath

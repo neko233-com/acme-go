@@ -1,0 +1,17 @@
+{
+  "account": {
+    "email": "ops@example.com"
+  },
+  "dns": {
+    "provider": "alidns",
+    "env": {
+      "ALICLOUD_ACCESS_KEY": "override-key"
+    }
+  },
+  "certificates": [
+    {
+      "name": "example",
+      "domains": ["_.neko2public.online"]
+    }
+  ]
+}

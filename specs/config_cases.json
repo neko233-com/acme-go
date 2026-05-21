@@ -4,7 +4,7 @@
     "env": {
       "ACME_EMAIL": "ops@example.com"
     },
-    "base_config": "account:\n  email: ${ACME_EMAIL}\n  accept_tos: true\ndns:\n  provider: cloudflare\ncertificates:\n  - name: example\n    domains:\n      - example.com\n",
+    "base_config": "{\n  \"account\": {\n    \"email\": \"${ACME_EMAIL}\",\n    \"accept_tos\": true\n  },\n  \"dns\": {\n    \"provider\": \"cloudflare\"\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"example.com\"]\n    }\n  ]\n}",
     "local_override": "",
     "expect": {
       "email": "ops@example.com",
@@ -20,12 +20,12 @@
     "env": {
       "ACME_EMAIL": "ops@example.com"
     },
-    "base_config": "account:\n  email: ${ACME_EMAIL}\n  accept_tos: true\ndns:\n  provider: cloudflare\ncertificates:\n  - name: example\n    domains:\n      - example.com\n",
-    "local_override": "{\n  \"dns\": {\n    \"provider\": \"alidns\",\n    \"env\": {\n      \"ALICLOUD_ACCESS_KEY\": \"override-key\"\n    }\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"test.neko233.com\", \"*.test.neko233.com\"]\n    }\n  ]\n}",
+    "base_config": "{\n  \"account\": {\n    \"email\": \"${ACME_EMAIL}\",\n    \"accept_tos\": true\n  },\n  \"dns\": {\n    \"provider\": \"cloudflare\"\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"example.com\"]\n    }\n  ]\n}",
+    "local_override": "{\n  \"dns\": {\n    \"provider\": \"alidns\",\n    \"env\": {\n      \"ALICLOUD_ACCESS_KEY\": \"override-key\"\n    }\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"_.neko2public.online\"]\n    }\n  ]\n}",
     "expect": {
       "email": "ops@example.com",
       "provider": "alidns",
-      "first_domain": "test.neko233.com",
+      "first_domain": "_.neko2public.online",
       "renew_before_days": 30,
       "challenge": "dns-01",
       "bundle": true,
@@ -33,12 +33,11 @@
         "ALICLOUD_ACCESS_KEY": "override-key"
       }
     }
-
   },
   {
     "name": "webroot-install-deploy-fields",
     "env": {},
-    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  provider: cloudflare\ncertificates:\n  - name: example\n    domains:\n      - example.com\n    challenge: webroot\n    webroot_path: public\n    install:\n      key_file: deploy/live/privkey.pem\n      fullchain_file: deploy/live/fullchain.pem\n    deploy:\n      - name: edge\n        type: copy\n        directory: deploy/edge\n    hooks:\n      post_install:\n        - echo install\n      post_deploy:\n        - echo deploy\n",
+    "base_config": "{\n  \"account\": {\n    \"email\": \"ops@example.com\",\n    \"accept_tos\": true\n  },\n  \"dns\": {\n    \"provider\": \"cloudflare\"\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"example.com\"],\n      \"challenge\": \"webroot\",\n      \"webroot_path\": \"public\",\n      \"install\": {\n        \"key_file\": \"deploy/live/privkey.pem\",\n        \"fullchain_file\": \"deploy/live/fullchain.pem\"\n      },\n      \"deploy\": [\n        {\n          \"name\": \"edge\",\n          \"type\": \"copy\",\n          \"directory\": \"deploy/edge\"\n        }\n      ],\n      \"hooks\": {\n        \"post_install\": [\"echo install\"],\n        \"post_deploy\": [\"echo deploy\"]\n      }\n    }\n  ]\n}",
     "local_override": "",
     "expect": {
       "email": "ops@example.com",
@@ -57,7 +56,7 @@
   {
     "name": "dns-credentials-derive-env",
     "env": {},
-    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  provider: volcengine-intl\n  account_mode: global\n  credentials:\n    access_key: ak-test\n    secret_key: sk-test\ncertificates:\n  - name: example\n    domains:\n      - example.com\n",
+    "base_config": "{\n  \"account\": {\n    \"email\": \"ops@example.com\",\n    \"accept_tos\": true\n  },\n  \"dns\": {\n    \"provider\": \"volcengine-intl\",\n    \"account_mode\": \"global\",\n    \"credentials\": {\n      \"access_key\": \"ak-test\",\n      \"secret_key\": \"sk-test\"\n    }\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"example.com\"]\n    }\n  ]\n}",
     "local_override": "",
     "expect": {
       "email": "ops@example.com",
@@ -76,7 +75,7 @@
   {
     "name": "dns-credentials-derive-digitalocean",
     "env": {},
-    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  provider: digitalocean\n  credentials:\n    api_token: do-token\ncertificates:\n  - name: example\n    domains:\n      - example.com\n",
+    "base_config": "{\n  \"account\": {\n    \"email\": \"ops@example.com\",\n    \"accept_tos\": true\n  },\n  \"dns\": {\n    \"provider\": \"digitalocean\",\n    \"credentials\": {\n      \"api_token\": \"do-token\"\n    }\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"example.com\"]\n    }\n  ]\n}",
     "local_override": "",
     "expect": {
       "email": "ops@example.com",
@@ -93,7 +92,7 @@
   {
     "name": "dns-credentials-derive-oraclecloud",
     "env": {},
-    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  provider: oraclecloud\n  region: ap-singapore-1\n  credentials:\n    compartment_id: ocid1.compartment.oc1..example\n    tenancy_id: ocid1.tenancy.oc1..example\n    user_id: ocid1.user.oc1..example\n    fingerprint: aa:bb:cc\n    private_key_file: .oracle/oci.pem\ncertificates:\n  - name: example\n    domains:\n      - example.com\n",
+    "base_config": "{\n  \"account\": {\n    \"email\": \"ops@example.com\",\n    \"accept_tos\": true\n  },\n  \"dns\": {\n    \"provider\": \"oraclecloud\",\n    \"region\": \"ap-singapore-1\",\n    \"credentials\": {\n      \"compartment_id\": \"ocid1.compartment.oc1..example\",\n      \"tenancy_id\": \"ocid1.tenancy.oc1..example\",\n      \"user_id\": \"ocid1.user.oc1..example\",\n      \"fingerprint\": \"aa:bb:cc\",\n      \"private_key_file\": \".oracle/oci.pem\"\n    }\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"example.com\"]\n    }\n  ]\n}",
     "local_override": "",
     "expect": {
       "email": "ops@example.com",
@@ -115,7 +114,7 @@
   {
     "name": "named-dns-provider-selected-per-certificate",
     "env": {},
-    "base_config": "account:\n  email: ops@example.com\n  accept_tos: true\ndns:\n  env:\n    GLOBAL_SHARED: enabled\ndns_providers:\n  cf-prod:\n    provider: cloudflare\n    credentials:\n      api_token: cf-token\n  aliyun-cn:\n    provider: alicloud-cn\n    credentials:\n      access_key: aliyun-ak\n      secret_key: aliyun-sk\ncertificates:\n  - name: example\n    domains:\n      - example.com\n    dns:\n      provider_ref: aliyun-cn\n",
+    "base_config": "{\n  \"account\": {\n    \"email\": \"ops@example.com\",\n    \"accept_tos\": true\n  },\n  \"dns\": {\n    \"env\": {\n      \"GLOBAL_SHARED\": \"enabled\"\n    }\n  },\n  \"dns_providers\": {\n    \"cf-prod\": {\n      \"provider\": \"cloudflare\",\n      \"credentials\": {\n        \"api_token\": \"cf-token\"\n      }\n    },\n    \"aliyun-cn\": {\n      \"provider\": \"alicloud-cn\",\n      \"credentials\": {\n        \"access_key\": \"aliyun-ak\",\n        \"secret_key\": \"aliyun-sk\"\n      }\n    }\n  },\n  \"certificates\": [\n    {\n      \"name\": \"example\",\n      \"domains\": [\"example.com\"],\n      \"dns\": {\n        \"provider_ref\": \"aliyun-cn\"\n      }\n    }\n  ]\n}",
     "local_override": "",
     "expect": {
       "email": "ops@example.com",

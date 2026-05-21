@@ -42,7 +42,7 @@ It currently focuses on the most common operational surface used in real deploym
 - Challenge support for `dns-01`, `http-01`, `standalone`, `webroot`, and `tls-alpn-01`.
 - Lifecycle commands for `help`, `doc`, `validate`, `paths`, `plan`, `issue`, `renew`, `revoke`, `list`, `info`, `install-cert`, `deploy`, `version`, and `upgrade`.
 - Scheduled renewal support through `automation.renew_interval` plus the `renew-loop` and `auto-renew` commands and library helper.
-- Config merge with `.local.json` override so secrets stay out of Git.
+- Config merge with `config_acme.local.json` override so secrets stay out of Git.
 - Low-config DNS credentials mapping: use `dns.credentials` for common vendors and let acme-go derive vendor env vars.
 - Batch-friendly DNS model: declare multiple named providers once under `dns_providers`, then select them per certificate.
 - Domestic and international provider aliases such as `alicloud-cn`, `alicloud-intl`, `volcengine-cn`, `volcengine-intl`, `tencentcloud-cn`, and `tencentcloud-intl`.
@@ -56,7 +56,7 @@ It currently focuses on the most common operational surface used in real deploym
 - 支持 `dns-01`、`http-01`、`standalone`、`webroot`、`tls-alpn-01` 五类 challenge。
 - 支持 `help`、`doc`、`validate`、`paths`、`plan`、`issue`、`renew`、`revoke`、`list`、`info`、`install-cert`、`deploy`、`version`、`upgrade` 等生命周期命令。
 - 支持通过 `automation.renew_interval` 以及 `renew-loop`、`auto-renew` 命令执行周期自动续期。
-- 支持 `.local.json` 覆盖配置，便于将敏感信息与 Git 隔离。
+- 支持 `config_acme.local.json` 覆盖配置，便于将敏感信息与 Git 隔离。
 - 支持低配置 DNS 凭据模型，优先填写 `dns.credentials`，由 acme-go 自动映射到各厂商需要的环境变量。
 - 支持批量证书场景：可在 `dns_providers` 中集中声明多组 DNS provider，再按证书选择使用哪一组。
 - 支持国内版/国际版 DNS 厂商别名，例如 `alicloud-cn`、`alicloud-intl`、`volcengine-cn`、`volcengine-intl`、`tencentcloud-cn`、`tencentcloud-intl`。
@@ -68,25 +68,25 @@ It currently focuses on the most common operational surface used in real deploym
 
 ## Quick Start | 快速开始
 
-1. Copy `config.example.yaml` to `config.yaml`.
-2. Put private credentials into `.local.json`.
-3. Run `go run . validate -config config.yaml`.
-4. Run `go run . paths -config config.yaml` to inspect resolved certificate file paths.
+1. Use `config_acme.json` as the primary config file.
+2. Put private credentials into `config_acme.local.json`.
+3. Run `go run . validate -config config_acme.json`.
+4. Run `go run . paths -config config_acme.json` to inspect resolved certificate file paths.
 5. Run `go run . providers` to inspect supported DNS vendors.
-6. Run `go run . plan -config config.yaml`.
-7. Run `go run . issue -config config.yaml`.
+6. Run `go run . plan -config config_acme.json`.
+7. Run `go run . issue -config config_acme.json`.
 
-1. 复制 `config.example.yaml` 为 `config.yaml`。
-2. 将私密凭据放入 `.local.json`。
-3. 运行 `go run . validate -config config.yaml`。
-4. 运行 `go run . paths -config config.yaml` 查看解析后的证书文件路径。
+1. 直接使用 `config_acme.json` 作为主配置文件。
+2. 将私密凭据放入 `config_acme.local.json`。
+3. 运行 `go run . validate -config config_acme.json`。
+4. 运行 `go run . paths -config config_acme.json` 查看解析后的证书文件路径。
 5. 运行 `go run . providers` 查看支持的 DNS 厂商。
-6. 运行 `go run . plan -config config.yaml`。
-7. 运行 `go run . issue -config config.yaml`。
+6. 运行 `go run . plan -config config_acme.json`。
+7. 运行 `go run . issue -config config_acme.json`。
 
-`config.yaml` stays commit-friendly, while `.local.json` has higher priority and should remain uncommitted.
+`config_acme.json` stays commit-friendly, while `config_acme.local.json` has higher priority and should remain uncommitted.
 
-`config.yaml` 适合提交到仓库，`.local.json` 优先级更高，建议始终不提交。
+`config_acme.json` 适合提交到仓库，`config_acme.local.json` 优先级更高，建议始终不提交。
 
 ## Go Library Usage | Go 二方库接入
 
@@ -155,11 +155,11 @@ func RenewNginxCertificate() error {
 
 `DNSProviders` lets one process batch-manage certificates backed by different vendors or different regional accounts. `OutputDir` controls the directory. `OutputFiles` controls generated file names. Relative file names are resolved under `OutputDir`; absolute file paths are also accepted. Suggested nginx names are `server.crt` for fullchain, `server.key` for the private key, `server.pub` for the public key, `leaf.crt` for the leaf certificate, `ca.crt` for the issuer chain, and `acme.json` for renewal metadata.
 
-To keep renewals running automatically, start the scheduler with `go run . auto-renew -config config.yaml`. The loop runs one renew pass immediately and then repeats according to `automation.renew_interval`, which defaults to `24h` when omitted. Embedded Go services can call `acmego.AutoRenewLoop` with a `context.Context` for the same behavior.
+To keep renewals running automatically, start the scheduler with `go run . auto-renew -config config_acme.json`. The loop runs one renew pass immediately and then repeats according to `automation.renew_interval`, which defaults to `24h` when omitted. Embedded Go services can call `acmego.AutoRenewLoop` with a `context.Context` for the same behavior.
 
 `DNSProviders` 让一个进程可以批量管理由不同厂商或不同地域账号托管的证书。`OutputDir` 用于指定目录，`OutputFiles` 用于指定生成文件名。相对路径会放在 `OutputDir` 下，绝对路径也可以直接使用。nginx GUI 场景建议用 `server.crt` 存 fullchain，`server.key` 存私钥，`server.pub` 存公钥，`leaf.crt` 存叶子证书，`ca.crt` 存签发链，`acme.json` 存续期元数据。
 
-如果希望进程持续自动续期，可以直接运行 `go run . auto-renew -config config.yaml`。它会先立刻跑一次续期，然后按照 `automation.renew_interval` 重复执行；如果你没写这个字段，默认按 `24h` 处理。作为 Go 二方库接入时，可使用 `acmego.AutoRenewLoop` 并通过 `context.Context` 控制退出。
+如果希望进程持续自动续期，可以直接运行 `go run . auto-renew -config config_acme.json`。它会先立刻跑一次续期，然后按照 `automation.renew_interval` 重复执行；如果你没写这个字段，默认按 `24h` 处理。作为 Go 二方库接入时，可使用 `acmego.AutoRenewLoop` 并通过 `context.Context` 控制退出。
 
 ## Commands | 命令说明
 
@@ -167,23 +167,23 @@ To keep renewals running automatically, start the scheduler with `go run . auto-
 go run . help [command]
 go run . doc [-print-path]
 go run . providers
-go run . validate -config config.yaml
-go run . paths -config config.yaml [-name example-prod]
-go run . plan -config config.yaml
-go run . list -config config.yaml
-go run . info -config config.yaml -name example-prod
-go run . issue -config config.yaml [-name example-prod] [-force]
-go run . renew -config config.yaml [-name example-prod] [-force]
-go run . renew-loop -config config.yaml [-name example-prod] [-force] [-interval 24h] [-once]
-go run . auto-renew -config config.yaml [-name example-prod] [-force] [-interval 24h] [-once]
-go run . revoke -config config.yaml -name example-prod
-go run . install-cert -config config.yaml -name example-prod
-go run . deploy -config config.yaml -name example-prod
+go run . validate -config config_acme.json
+go run . paths -config config_acme.json [-name example-prod]
+go run . plan -config config_acme.json
+go run . list -config config_acme.json
+go run . info -config config_acme.json -name example-prod
+go run . issue -config config_acme.json [-name example-prod] [-force]
+go run . renew -config config_acme.json [-name example-prod] [-force]
+go run . renew-loop -config config_acme.json [-name example-prod] [-force] [-interval 24h] [-once]
+go run . auto-renew -config config_acme.json [-name example-prod] [-force] [-interval 24h] [-once]
+go run . revoke -config config_acme.json -name example-prod
+go run . install-cert -config config_acme.json -name example-prod
+go run . deploy -config config_acme.json -name example-prod
 go run . version
 go run . upgrade
 ```
 
-- `validate`: load config, apply defaults, merge `.local.json`, and print a short JSON summary.
+- `validate`: load config, apply defaults, merge `config_acme.local.json`, and print a short JSON summary.
 - `help`: print overall usage, or command-specific help such as `acme-go help version`.
 - `doc`: open `how-to-use.html` in the default browser, or use `-print-path` to print the resolved file path.
 - `paths`: print resolved output paths for generated certificate material.
@@ -198,7 +198,7 @@ go run . upgrade
 - `upgrade`: download the latest matching GitHub release artifact for the current OS and architecture and replace the local binary.
 - Automatic update checks are enabled by default before operational commands. Set `ACME_GO_AUTO_UPDATE=false` to disable them.
 
-- `validate`：加载配置、应用默认值、合并 `.local.json`，并输出简短 JSON 摘要。
+- `validate`：加载配置、应用默认值、合并 `config_acme.local.json`，并输出简短 JSON 摘要。
 - `help`：输出总帮助，或按命令查看帮助，例如 `acme-go help version`。
 - `doc`：在默认浏览器中打开 `how-to-use.html`，也可以通过 `-print-path` 只输出最终解析到的文件路径。
 - `paths`：输出证书产物的最终解析路径。
@@ -335,9 +335,9 @@ certificates:
     bundle: true
 ```
 
-Local override example for `.local.json`:
+Local override example for `config_acme.local.json`:
 
-`.local.json` 本地覆盖示例：
+`config_acme.local.json` 本地覆盖示例：
 
 ```json
 {
@@ -351,9 +351,9 @@ Local override example for `.local.json`:
 }
 ```
 
-`config.schema.json` is included for editor validation. VS Code maps it to `config.yaml` and `config.*.yaml` through `.vscode/settings.json` when the YAML extension is installed.
+`config.schema.json` is included for editor validation. VS Code maps it to `config_acme.json` and `config_acme.local.json` through `.vscode/settings.json`.
 
-仓库内置 `config.schema.json` 用于编辑器校验。安装 YAML 扩展后，VS Code 会通过 `.vscode/settings.json` 将它关联到 `config.yaml` 与 `config.*.yaml`。
+仓库内置 `config.schema.json` 用于编辑器校验。VS Code 会通过 `.vscode/settings.json` 将它关联到 `config_acme.json` 与 `config_acme.local.json`。
 
 `failure_commands` receives these environment variables on each failed auto-renew attempt: `ACME_LOOP_TARGET`, `ACME_LOOP_ATTEMPT`, `ACME_LOOP_MAX_RETRY_ATTEMPTS`, `ACME_LOOP_NEXT_RETRY`, `ACME_LOOP_INTERVAL`, `ACME_LOOP_FINAL_FAILURE`, `ACME_LOOP_ERROR`, and `ACME_LOOP_OCCURRED_AT`.
 
@@ -367,7 +367,7 @@ For Linux, use [install-systemd-service.sh](./install-systemd-service.sh) or the
 
 ```bash
 chmod +x install-systemd-service.sh
-./install-systemd-service.sh acme-go-auto-renew /etc/acme-go/config.yaml /usr/local/bin/acme-go
+./install-systemd-service.sh acme-go-auto-renew /etc/acme-go/config_acme.json /usr/local/bin/acme-go
 ```
 
 For Windows, acme-go is a console program, so [install-windows-service.cmd](./install-windows-service.cmd) installs it through `nssm` as a Windows Service wrapper:
@@ -375,7 +375,7 @@ For Windows, acme-go is a console program, so [install-windows-service.cmd](./in
 对于 Windows，由于 acme-go 本身是控制台程序，所以 [install-windows-service.cmd](./install-windows-service.cmd) 通过 `nssm` 将其包装为 Windows Service：
 
 ```cmd
-install-windows-service.cmd acme-go-auto-renew C:\acme-go\config.yaml C:\acme-go\acme-go.exe
+install-windows-service.cmd acme-go-auto-renew C:\acme-go\config_acme.json C:\acme-go\acme-go.exe
 ```
 
 The recommended long-running command for both service styles is `auto-renew -config ...` because it now retries failed renew cycles with backoff and keeps the process alive for the next scheduled run.
@@ -460,13 +460,13 @@ Hook 与 deploy 命令可用的重要环境变量包括：
 ## Testing and Spec | 测试与规范
 
 - `go test ./...` covers config, provider registry, challenge helpers, deploy/install behavior, and core certificate helpers.
-- `go test -tags=integration -timeout 20m ./...` runs the live ACME staging flow when `.local.json` is present.
+- `go test -tags=integration -timeout 20m ./...` runs the live ACME staging flow when `config_acme.local.json` is present.
 - `test-auto.cmd` and `test-auto.sh` are the cross-platform automation entrypoints.
 - `git-auto-up.cmd` and `git-auto-up.sh` run tests first, then commit and push when checks pass.
 - Specs live under `specs/` and drive config loading, provider aliases, and command dispatch tests.
 
 - `go test ./...` 覆盖配置、provider registry、challenge helper、deploy/install 行为以及证书核心辅助逻辑。
-- `go test -tags=integration -timeout 20m ./...` 会在存在 `.local.json` 时执行真实 ACME staging 测试。
+- `go test -tags=integration -timeout 20m ./...` 会在存在 `config_acme.local.json` 时执行真实 ACME staging 测试。
 - `test-auto.cmd` 和 `test-auto.sh` 是跨平台自动化测试入口。
 - `git-auto-up.cmd` 和 `git-auto-up.sh` 会先测试，再在全部通过后提交并推送。
 - `specs/` 下保存机器可读规范，用于驱动配置加载、provider alias 和命令分发测试。
@@ -563,7 +563,7 @@ Suggested loop:
 ├─ internal/hook/
 ├─ internal/testspec/
 ├─ specs/
-├─ config.example.yaml
+├─ config_acme.json
 ├─ how-to-use.html
 ├─ test-auto.cmd
 ├─ test-auto.sh

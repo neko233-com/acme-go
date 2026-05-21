@@ -1,31 +1,21 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
+const testConfigFixture = "config_acme.test.json"
+const testLocalConfigFixture = "config_acme.test.local.json"
+
 func TestLoadAppliesDefaultsAndEnvExpansion(t *testing.T) {
 	t.Setenv("ACME_EMAIL", "ops@example.com")
 
 	dir := t.TempDir()
-	path := filepath.Join(dir, "config.yaml")
-	content := `account:
-  email: ${ACME_EMAIL}
-  accept_tos: true
-dns:
-  provider: cloudflare
-certificates:
-  - name: example
-    domains:
-      - example.com
-`
-
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
+	path := copyFixture(t, dir, testConfigFixture, "config_acme.json", 0o644)
 
 	cfg, err := Load(path)
 	if err != nil {
@@ -65,38 +55,8 @@ func TestLoadPrefersLocalJSONOverride(t *testing.T) {
 	t.Setenv("ACME_EMAIL", "ops@example.com")
 
 	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.integration.yaml")
-	baseConfig := `account:
-  email: ${ACME_EMAIL}
-  accept_tos: true
-dns:
-  provider: cloudflare
-certificates:
-  - name: example
-    domains:
-      - example.com
-`
-	localOverride := `{
-  "dns": {
-    "provider": "alidns",
-    "env": {
-      "ALICLOUD_ACCESS_KEY": "override-key"
-    }
-  },
-  "certificates": [
-    {
-      "name": "example",
-      "domains": ["test.neko233.com", "*.test.neko233.com"]
-    }
-  ]
-}`
-
-	if err := os.WriteFile(configPath, []byte(baseConfig), 0o644); err != nil {
-		t.Fatalf("write base config: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, ".local.json"), []byte(localOverride), 0o600); err != nil {
-		t.Fatalf("write local override: %v", err)
-	}
+	configPath := copyFixture(t, dir, testConfigFixture, "config_acme.json", 0o644)
+	copyFixture(t, dir, testLocalConfigFixture, "config_acme.local.json", 0o600)
 
 	cfg, err := Load(configPath)
 	if err != nil {
@@ -109,27 +69,22 @@ certificates:
 	if cfg.DNS.Env["ALICLOUD_ACCESS_KEY"] != "override-key" {
 		t.Fatalf("expected override access key, got %q", cfg.DNS.Env["ALICLOUD_ACCESS_KEY"])
 	}
-	if got := cfg.Certificates[0].Domains[0]; got != "test.neko233.com" {
+	if got := cfg.Certificates[0].Domains[0]; got != "_.neko2public.online" {
 		t.Fatalf("expected local certificate override, got %q", got)
 	}
 }
 
 func TestLoadAllowsDisablingRetriesExplicitly(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "config.yaml")
-	content := `account:
-  email: ops@example.com
-  accept_tos: true
-automation:
-  max_retry_attempts: 0
-dns:
-  provider: cloudflare
-certificates:
-  - name: example
-    domains:
-      - example.com
-`
-
+	path := filepath.Join(dir, "config_acme.json")
+	cfgFile := loadFixtureConfig(t, testConfigFixture)
+	cfgFile.Account.Email = "ops@example.com"
+	zeroRetryAttempts := 0
+	cfgFile.Automation.MaxRetryAttempts = &zeroRetryAttempts
+	content, err := json.MarshalIndent(cfgFile, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
@@ -141,6 +96,32 @@ certificates:
 	if cfg.Automation.MaxRetryAttempts == nil || *cfg.Automation.MaxRetryAttempts != 0 {
 		t.Fatalf("unexpected max retry attempts: %v", cfg.Automation.MaxRetryAttempts)
 	}
+}
+
+func copyFixture(t *testing.T, dir, sourceName, targetName string, perm os.FileMode) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", sourceName))
+	if err != nil {
+		t.Fatalf("read fixture %s: %v", sourceName, err)
+	}
+	targetPath := filepath.Join(dir, targetName)
+	if err := os.WriteFile(targetPath, data, perm); err != nil {
+		t.Fatalf("write fixture %s: %v", targetName, err)
+	}
+	return targetPath
+}
+
+func loadFixtureConfig(t *testing.T, sourceName string) Config {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", sourceName))
+	if err != nil {
+		t.Fatalf("read fixture %s: %v", sourceName, err)
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("parse fixture %s: %v", sourceName, err)
+	}
+	return cfg
 }
 
 func TestCertificatePathsUseConfiguredOutputFiles(t *testing.T) {

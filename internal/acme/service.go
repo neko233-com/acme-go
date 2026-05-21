@@ -94,34 +94,35 @@ func Run(cfg *config.Config, options Options) (Result, error) {
 			continue
 		}
 
-		var client *lego.Client
 		err = runtime.withChallengeEnv(func() error {
-			var buildErr error
-			client, buildErr = buildClient(user, cfg, runtime)
-			return buildErr
+			client, buildErr := buildClient(user, cfg, runtime)
+			if buildErr != nil {
+				return buildErr
+			}
+			if err := ensureRegistration(client, user, cfg.Account.AcceptTOS); err != nil {
+				return err
+			}
+			if err := runPreHooks(runtime.cert, options.Mode, runtime.deployContext, options.Out); err != nil {
+				return err
+			}
+
+			resource, err := executeCertificateOperation(client, runtime.cert, options.Mode)
+			if err != nil {
+				return fmt.Errorf("%s %s: %w", options.Mode, runtime.cert.Name, err)
+			}
+			if err := writeCertificate(runtime, cfg, resource); err != nil {
+				return err
+			}
+			if err := runSuccessActions(runtime, options.Mode, options.Out); err != nil {
+				return err
+			}
+			fmt.Fprintf(options.Out, "%s: wrote certificate to %s\n", runtime.cert.Name, runtime.cert.OutputDir)
+			result.Changed++
+			return nil
 		})
 		if err != nil {
 			return result, err
 		}
-		if err := ensureRegistration(client, user, cfg.Account.AcceptTOS); err != nil {
-			return result, err
-		}
-		if err := runPreHooks(runtime.cert, options.Mode, runtime.deployContext, options.Out); err != nil {
-			return result, err
-		}
-
-		resource, err := executeCertificateOperation(client, runtime.cert, options.Mode)
-		if err != nil {
-			return result, fmt.Errorf("%s %s: %w", options.Mode, runtime.cert.Name, err)
-		}
-		if err := writeCertificate(runtime, cfg, resource); err != nil {
-			return result, err
-		}
-		if err := runSuccessActions(runtime, options.Mode, options.Out); err != nil {
-			return result, err
-		}
-		fmt.Fprintf(options.Out, "%s: wrote certificate to %s\n", runtime.cert.Name, runtime.cert.OutputDir)
-		result.Changed++
 	}
 
 	return result, nil

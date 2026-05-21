@@ -2,7 +2,7 @@
 set -eu
 
 SERVICE_NAME="${1:-acme-go-auto-renew}"
-CONFIG_PATH="${2:-$(pwd)/config.yaml}"
+CONFIG_PATH="${2:-$(pwd)/config_acme.json}"
 BINARY_PATH="${3:-$(pwd)/acme-go}"
 UNIT_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
 WORK_DIR="$(dirname "$CONFIG_PATH")"

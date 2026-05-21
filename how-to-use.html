@@ -196,21 +196,21 @@
         <article class="panel">
           <h3>English</h3>
           <ul>
-            <li>Copy <code>config.example.yaml</code> to <code>config.yaml</code>.</li>
-            <li>Create <code>.local.json</code> for provider secrets and local-only overrides.</li>
+            <li>Use <code>config_acme.json</code> as the main config file.</li>
+            <li>Create <code>config_acme.local.json</code> for provider secrets and local-only overrides.</li>
             <li>Run <code>go run . providers</code> to check available DNS vendors.</li>
-            <li>Run <code>go run . plan -config config.yaml</code> before issuing.</li>
-            <li>Run <code>go run . issue -config config.yaml</code> to obtain certificates.</li>
+            <li>Run <code>go run . plan -config config_acme.json</code> before issuing.</li>
+            <li>Run <code>go run . issue -config config_acme.json</code> to obtain certificates.</li>
           </ul>
         </article>
         <article class="panel">
           <h3>中文</h3>
           <ul>
-            <li>复制 <code>config.example.yaml</code> 为 <code>config.yaml</code>。</li>
-            <li>创建 <code>.local.json</code> 保存厂商密钥和仅本地生效的覆盖配置。</li>
+            <li>直接使用 <code>config_acme.json</code> 作为主配置文件。</li>
+            <li>创建 <code>config_acme.local.json</code> 保存厂商密钥和仅本地生效的覆盖配置。</li>
             <li>运行 <code>go run . providers</code> 查看支持的 DNS 厂商。</li>
-            <li>在签发前先执行 <code>go run . plan -config config.yaml</code>。</li>
-            <li>执行 <code>go run . issue -config config.yaml</code> 获取证书。</li>
+            <li>在签发前先执行 <code>go run . plan -config config_acme.json</code>。</li>
+            <li>执行 <code>go run . issue -config config_acme.json</code> 获取证书。</li>
           </ul>
         </article>
       </div>
@@ -219,15 +219,15 @@
     <section class="section" id="commands">
       <h2>Commands | 命令</h2>
       <pre><code>go run . providers
-go run . plan -config config.yaml
-go run . list -config config.yaml
-go run . info -config config.yaml -name example-prod
-go run . issue -config config.yaml [-name example-prod] [-force]
-go run . renew -config config.yaml [-name example-prod] [-force]
-go run . auto-renew -config config.yaml [-name example-prod] [-force]
-go run . revoke -config config.yaml -name example-prod
-go run . install-cert -config config.yaml -name example-prod
-go run . deploy -config config.yaml -name example-prod
+go run . plan -config config_acme.json
+go run . list -config config_acme.json
+go run . info -config config_acme.json -name example-prod
+go run . issue -config config_acme.json [-name example-prod] [-force]
+go run . renew -config config_acme.json [-name example-prod] [-force]
+go run . auto-renew -config config_acme.json [-name example-prod] [-force]
+go run . revoke -config config_acme.json -name example-prod
+go run . install-cert -config config_acme.json -name example-prod
+go run . deploy -config config_acme.json -name example-prod
 go run . version</code></pre>
     </section>
 
@@ -321,12 +321,12 @@ certificates:
           <h3>Linux systemd</h3>
           <p>Use <code>install-systemd-service.sh</code> to install and enable a long-running auto-renew service.</p>
           <pre><code>chmod +x install-systemd-service.sh
-./install-systemd-service.sh acme-go-auto-renew /etc/acme-go/config.yaml /usr/local/bin/acme-go</code></pre>
+./install-systemd-service.sh acme-go-auto-renew /etc/acme-go/config_acme.json /usr/local/bin/acme-go</code></pre>
         </article>
         <article class="panel">
           <h3>Windows Service</h3>
           <p>Use <code>install-windows-service.cmd</code> together with <code>nssm</code> to wrap <code>acme-go.exe</code> as a Windows Service.</p>
-          <pre><code>install-windows-service.cmd acme-go-auto-renew C:\acme-go\config.yaml C:\acme-go\acme-go.exe</code></pre>
+          <pre><code>install-windows-service.cmd acme-go-auto-renew C:\acme-go\config_acme.json C:\acme-go\acme-go.exe</code></pre>
         </article>
       </div>
     </section>

@@ -1,0 +1,98 @@
+{
+  "ca": {
+    "directory_url": "https://acme-v02.api.letsencrypt.org/directory"
+  },
+  "account": {
+    "email": "placeholder@example.com",
+    "key_path": ".acme/account.pem",
+    "accept_tos": true
+  },
+  "automation": {
+    "renew_interval": "24h",
+    "retry_backoff": "1m",
+    "max_retry_backoff": "15m",
+    "max_retry_attempts": 5,
+    "failure_commands": []
+  },
+  "dns": {
+    "disable_cname_support": false,
+    "disable_complete_propagation": false,
+    "recursive_nameservers": [],
+    "env": {}
+  },
+  "dns_providers": {
+    "aliyun-cn": {
+      "provider": "alicloud-cn",
+      "account_mode": "cn"
+    }
+  },
+  "certificates": [
+    {
+      "name": "example-prod",
+      "domains": ["neko2public.com", "*.neko2public.com"],
+      "dns": {
+        "provider_ref": "aliyun-cn"
+      },
+      "output_dir": "output_SSL/_.neko2public.com",
+      "output_files": {
+        "cert_file": "cert.pem",
+        "key_file": "privkey.pem",
+        "public_key_file": "pubkey.pem",
+        "fullchain_file": "fullchain.pem",
+        "chain_file": "issuer.pem",
+        "metadata_file": "metadata.json"
+      },
+      "key_type": "ec256",
+      "preferred_chain": "",
+      "must_staple": false,
+      "csr_path": "",
+      "renew_before_days": 30,
+      "challenge": "dns-01",
+      "webroot_path": "",
+      "http_bind": "0.0.0.0",
+      "http_port": "80",
+      "tlsalpn_bind": "0.0.0.0",
+      "tlsalpn_port": "443",
+      "install": {
+        "key_file": "",
+        "public_key_file": "",
+        "fullchain_file": "",
+        "metadata_file": ""
+      },
+      "deploy": [
+        {
+          "name": "local-copy",
+          "type": "copy",
+          "directory": "deploy/example-prod"
+        },
+        {
+          "name": "reload-service",
+          "type": "command",
+          "command": "echo reload-service"
+        }
+      ],
+      "hooks": {
+        "pre_issue": [],
+        "post_issue": [],
+        "pre_renew": [],
+        "post_renew": [],
+        "post_revoke": [],
+        "post_install": [],
+        "post_deploy": []
+      },
+      "bundle": true
+    },
+    {
+      "name": "neko233-staging",
+      "domains": ["_.neko2public.online"],
+      "dns": {
+        "provider_ref": "aliyun-cn"
+      },
+      "output_dir": "output_SSL/_.neko2public.online",
+      "key_type": "ec256",
+      "renew_before_days": 30,
+      "challenge": "dns-01",
+      "bundle": true
+    }
+  ]
+}

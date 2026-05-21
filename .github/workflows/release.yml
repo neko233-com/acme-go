@@ -58,7 +58,7 @@ jobs:
           version_value="${VERSION#v}"
           go build -trimpath -ldflags "-s -w -X main.version=${version_value}" -o "$outdir/$binary" .
           cp README.md "$outdir/README.md"
-          cp config.example.yaml "$outdir/config.example.yaml"
+          cp config_acme.json "$outdir/config_acme.json"
           cp how-to-use.html "$outdir/how-to-use.html"
           if [ "$GOOS" = "windows" ]; then
             (cd dist && zip -r "acme-go_${GOOS}_${GOARCH}.zip" "acme-go_${GOOS}_${GOARCH}")
@@ -96,7 +96,7 @@ jobs:
           set -euo pipefail
           mkdir -p release-docs
           cp README.md release-docs/README.md
-          cp config.example.yaml release-docs/config.example.yaml
+          cp config_acme.json release-docs/config_acme.json
           cp how-to-use.html release-docs/how-to-use.html
           tar -C release-docs -czf docs_bundle.tar.gz .
           cd dist-artifacts

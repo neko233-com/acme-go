@@ -20,11 +20,11 @@ if [ "$run_integration" = "0" ]; then
 	exit 0
 fi
 
-if [ -f .local.json ]; then
+if [ -f config_acme.local.json ]; then
 	echo "[3/4] Running integration tests..."
 	go test -tags=integration -timeout 20m ./...
 else
-	echo "[3/4] Skipping integration tests because .local.json was not found."
+	echo "[3/4] Skipping integration tests because config_acme.local.json was not found."
 fi
 
 echo "[4/4] All checks passed."

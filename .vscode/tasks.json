@@ -18,7 +18,14 @@
     {
       "label": "validate: config example",
       "type": "shell",
-      "command": "go run . validate -config config.example.yaml",
+      "command": "go run . validate -config config_acme.json",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "validate: config test",
+      "type": "shell",
+      "command": "go run . validate -config config_acme.test.json",
       "group": "test",
       "problemMatcher": []
     },

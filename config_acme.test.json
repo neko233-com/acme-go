@@ -1,0 +1,15 @@
+{
+  "account": {
+    "email": "${ACME_EMAIL}",
+    "accept_tos": true
+  },
+  "dns": {
+    "provider": "cloudflare"
+  },
+  "certificates": [
+    {
+      "name": "example",
+      "domains": ["example.com"]
+    }
+  ]
+}

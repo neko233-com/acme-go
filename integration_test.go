@@ -13,14 +13,14 @@ import (
 )
 
 func TestAliDNSStagingIssueFlow(t *testing.T) {
-	if _, err := os.Stat(".local.json"); err != nil {
+	if _, err := os.Stat("config_acme.local.json"); err != nil {
 		if os.IsNotExist(err) {
-			t.Skip(".local.json not found")
+			t.Skip("config_acme.local.json not found")
 		}
-		t.Fatalf("stat .local.json: %v", err)
+		t.Fatalf("stat config_acme.local.json: %v", err)
 	}
 
-	cfg, err := config.Load("config.integration.yaml")
+	cfg, err := config.Load("config_acme.json")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}

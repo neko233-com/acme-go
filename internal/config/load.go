@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"gopkg.in/yaml.v3"
+	"strings"
 )
 
-// Load reads the primary YAML config, merges the optional .local.json override,
-// applies defaults, then validates the fully resolved result.
+// Load reads the primary JSON config, merges the optional <name>.local.json
+// override, applies defaults, then validates the fully resolved result.
 func Load(path string) (*Config, error) {
-	cfg, err := loadYAML(path)
+	cfg, err := loadJSONConfig(path)
 	if err != nil {
 		return nil, err
 	}
 
-	localOverridePath := filepath.Join(filepath.Dir(path), ".local.json")
+	localOverridePath := localOverridePath(path)
 	if override, err := loadJSON(localOverridePath); err == nil {
 		cfg.merge(override)
 	} else if !os.IsNotExist(err) {
@@ -34,14 +33,24 @@ func Load(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-func loadYAML(path string) (Config, error) {
+func localOverridePath(path string) string {
+	base := filepath.Base(path)
+	extension := filepath.Ext(base)
+	if extension == "" {
+		return filepath.Join(filepath.Dir(path), base+".local.json")
+	}
+	name := strings.TrimSuffix(base, extension)
+	return filepath.Join(filepath.Dir(path), name+".local.json")
+}
+
+func loadJSONConfig(path string) (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Config{}, fmt.Errorf("read config: %w", err)
 	}
 
 	var cfg Config
-	if err := yaml.Unmarshal([]byte(os.ExpandEnv(string(data))), &cfg); err != nil {
+	if err := json.Unmarshal([]byte(os.ExpandEnv(string(data))), &cfg); err != nil {
 		return Config{}, fmt.Errorf("parse config: %w", err)
 	}
 	return cfg, nil

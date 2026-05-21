@@ -42,12 +42,12 @@ func TestLoadSpecs(t *testing.T) {
 			}
 
 			dir := t.TempDir()
-			configPath := filepath.Join(dir, "config.yaml")
+			configPath := filepath.Join(dir, "config_acme.json")
 			if err := os.WriteFile(configPath, []byte(spec.BaseConfig), 0o644); err != nil {
 				t.Fatalf("write base config: %v", err)
 			}
 			if spec.LocalOverride != "" {
-				if err := os.WriteFile(filepath.Join(dir, ".local.json"), []byte(spec.LocalOverride), 0o600); err != nil {
+				if err := os.WriteFile(filepath.Join(dir, "config_acme.local.json"), []byte(spec.LocalOverride), 0o600); err != nil {
 					t.Fatalf("write local override: %v", err)
 				}
 			}

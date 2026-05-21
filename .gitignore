@@ -1,8 +1,10 @@
 .acme/
 certs/
+output_SSL/
 dist/
 bin/
 coverage.out
+config_acme.local.json
 config.yaml
 .local.json
 .env
