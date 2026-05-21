@@ -398,7 +398,103 @@ func writeCertificate(runtime certificateRuntime, cfg *config.Config, resource *
 		return err
 	}
 
-	return writeMetadata(runtime, cfg, resource, expiry)
+	if err := writeMetadata(runtime, cfg, resource, expiry); err != nil {
+		return err
+	}
+	return writeCertificateReadmes(runtime.cert, paths, expiry)
+}
+
+func writeCertificateReadmes(cert config.CertificateSpec, paths config.CertificatePaths, expiry time.Time) error {
+	readmes := []struct {
+		name    string
+		content string
+	}{
+		{name: "README.en.md", content: certificateReadmeEN(cert, paths, expiry)},
+		{name: "README.zh-CN.md", content: certificateReadmeZH(cert, paths, expiry)},
+	}
+	for _, readme := range readmes {
+		path := filepath.Join(cert.OutputDir, readme.name)
+		if err := os.WriteFile(path, []byte(readme.content), 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", path, err)
+		}
+	}
+	return nil
+}
+
+func certificateReadmeEN(cert config.CertificateSpec, paths config.CertificatePaths, expiry time.Time) string {
+	domains := strings.Join(cert.Domains, ", ")
+	return fmt.Sprintf(`# SSL Certificate Files
+
+Certificate name: %s
+Domains: %s
+Output directory: %s
+Valid until: %s
+
+## File Guide
+
+| File | Purpose |
+| --- | --- |
+| %s | Leaf certificate for the requested domain. Use it only when your server asks for the leaf certificate separately. |
+| %s | Private key. Keep this file secret and never commit it to Git. |
+| %s | Public key extracted from the certificate. Useful for inspection, pinning, or tools that need only the public key. |
+| %s | Leaf certificate plus issuer chain. This is the usual certificate file for nginx, Caddy, Apache, and most panels. |
+| %s | Issuer/intermediate certificate chain. Use it when a server asks for the chain separately. |
+| %s | acme-go metadata: provider, challenge type, ACME certificate URL, issue time, and expiry time. |
+
+## Common Usage
+
+nginx:
+
+	ssl_certificate     %s;
+	ssl_certificate_key %s;
+
+Caddy:
+
+	tls %s %s
+
+For most services, choose %s as the certificate chain and %s as the private key.
+Back up this directory if needed, but keep privkey.pem private.
+`, cert.Name, domains, cert.OutputDir, expiry.Format(time.RFC3339),
+		filepath.Base(paths.CertFile), filepath.Base(paths.KeyFile), filepath.Base(paths.PublicKeyFile), filepath.Base(paths.FullChainFile), filepath.Base(paths.ChainFile), filepath.Base(paths.MetadataFile),
+		paths.FullChainFile, paths.KeyFile, paths.FullChainFile, paths.KeyFile, filepath.Base(paths.FullChainFile), filepath.Base(paths.KeyFile))
+}
+
+func certificateReadmeZH(cert config.CertificateSpec, paths config.CertificatePaths, expiry time.Time) string {
+	domains := strings.Join(cert.Domains, ", ")
+	return fmt.Sprintf(`# SSL 证书文件说明
+
+证书名称：%s
+域名：%s
+输出目录：%s
+有效期至：%s
+
+## 文件用途
+
+| 文件 | 用途 |
+| --- | --- |
+| %s | 域名对应的叶子证书。只有在服务端要求单独填写站点证书时才需要用它。 |
+| %s | 私钥文件。必须保密，不要提交到 Git，也不要发给别人。 |
+| %s | 从证书里提取出来的公钥。常用于检查、固定公钥或只需要公钥的工具。 |
+| %s | 叶子证书加中间证书链。nginx、Caddy、Apache 和大多数面板通常都用这个作为证书文件。 |
+| %s | 签发者/中间证书链。有些服务端会要求单独填写证书链。 |
+| %s | acme-go 元数据，包含 DNS 厂商、验证方式、ACME 证书 URL、签发时间和过期时间。 |
+
+## 常见用法
+
+nginx：
+
+	ssl_certificate     %s;
+	ssl_certificate_key %s;
+
+Caddy：
+
+	tls %s %s
+
+大多数服务里，证书链选择 %s，私钥选择 %s。
+这个目录可以备份，但一定要保护好 privkey.pem。
+`, cert.Name, domains, cert.OutputDir, expiry.Format(time.RFC3339),
+		filepath.Base(paths.CertFile), filepath.Base(paths.KeyFile), filepath.Base(paths.PublicKeyFile), filepath.Base(paths.FullChainFile), filepath.Base(paths.ChainFile), filepath.Base(paths.MetadataFile),
+		paths.FullChainFile, paths.KeyFile, paths.FullChainFile, paths.KeyFile, filepath.Base(paths.FullChainFile), filepath.Base(paths.KeyFile))
 }
 
 func publicKeyPEMFromCertificate(data []byte) ([]byte, error) {

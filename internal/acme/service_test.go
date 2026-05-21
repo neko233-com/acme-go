@@ -84,6 +84,8 @@ func TestWriteCertificateUsesConfiguredOutputFiles(t *testing.T) {
 	assertPathContains(t, paths.FullChainFile, "BEGIN CERTIFICATE")
 	assertPathContains(t, paths.ChainFile, "BEGIN CERTIFICATE")
 	assertPathContains(t, paths.MetadataFile, "nginx-gui")
+	assertPathContains(t, filepath.Join(dir, "README.en.md"), "server.fullchain.crt")
+	assertPathContains(t, filepath.Join(dir, "README.zh-CN.md"), "server.key")
 	if _, err := os.Stat(filepath.Join(dir, "fullchain.pem")); !os.IsNotExist(err) {
 		t.Fatalf("default fullchain.pem should not be written when custom output file is configured")
 	}
