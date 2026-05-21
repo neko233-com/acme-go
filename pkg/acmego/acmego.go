@@ -2,7 +2,10 @@ package acmego
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"path/filepath"
+	"strings"
 
 	"github.com/neko233-com/acme-go/internal/acme"
 	"github.com/neko233-com/acme-go/internal/config"
@@ -18,6 +21,7 @@ type DNSConfig = config.DNSConfig
 type CertificateSpec = config.CertificateSpec
 type CertificateFiles = config.CertificateFiles
 type CertificatePaths = config.CertificatePaths
+type DNSCredentials = config.DNSCredentials
 type InstallConfig = config.InstallConfig
 type DeployTarget = config.DeployTarget
 type HookConfig = config.HookConfig
@@ -38,8 +42,155 @@ type CertificatePathInfo = acme.CertificatePathInfo
 type ReleaseDiff = update.ReleaseDiff
 type VersionInfo = update.VersionInfo
 
+// Request is the compact library-facing API for embedding ACME issuance in a Go
+// service. Fill Email, Provider, provider credentials, and Domains; the helper
+// builds the full runtime config for DNS-01 certificate issuance.
+type Request struct {
+	Email                      string
+	AccountKeyPath             string
+	CADirectoryURL             string
+	Name                       string
+	Domains                    []string
+	Provider                   string
+	AccountMode                string
+	Region                     string
+	Credentials                DNSCredentials
+	Env                        map[string]string
+	OutputDir                  string
+	OutputFiles                CertificateFiles
+	KeyType                    string
+	RenewBeforeDays            int
+	DisableCNAMESupport        bool
+	DisableCompletePropagation bool
+	RecursiveNameservers       []string
+	Force                      bool
+}
+
+type CertificateResult struct {
+	Result Result
+	Name   string
+	Paths  CertificatePaths
+}
+
 func Load(path string) (*Config, error) {
 	return config.Load(path)
+}
+
+func BuildConfig(request Request) (*Config, error) {
+	if len(request.Domains) == 0 {
+		return nil, fmt.Errorf("at least one domain is required")
+	}
+	name := strings.TrimSpace(request.Name)
+	if name == "" {
+		name = certificateNameFromDomain(request.Domains[0])
+	}
+	outputDir := strings.TrimSpace(request.OutputDir)
+	if outputDir == "" {
+		outputDir = filepath.Join("certs", name)
+	}
+	keyType := strings.TrimSpace(request.KeyType)
+	if keyType == "" {
+		keyType = "ec256"
+	}
+	renewBeforeDays := request.RenewBeforeDays
+	if renewBeforeDays == 0 {
+		renewBeforeDays = 30
+	}
+	caDirectoryURL := strings.TrimSpace(request.CADirectoryURL)
+	if caDirectoryURL == "" {
+		caDirectoryURL = "https://acme-v02.api.letsencrypt.org/directory"
+	}
+	accountKeyPath := strings.TrimSpace(request.AccountKeyPath)
+	if accountKeyPath == "" {
+		accountKeyPath = filepath.Join(outputDir, ".acme", "account.pem")
+	}
+	maxRetryAttempts := 5
+
+	cfg := &Config{
+		CA: CAConfig{DirectoryURL: caDirectoryURL},
+		Account: AccountConfig{
+			Email:     request.Email,
+			KeyPath:   accountKeyPath,
+			AcceptTOS: true,
+		},
+		Automation: AutomationConfig{
+			RenewInterval:    "24h",
+			RetryBackoff:     "1m",
+			MaxRetryBackoff:  "15m",
+			MaxRetryAttempts: &maxRetryAttempts,
+		},
+		DNS: DNSConfig{
+			Provider:                   request.Provider,
+			AccountMode:                request.AccountMode,
+			Region:                     request.Region,
+			Credentials:                request.Credentials,
+			Env:                        copyStringMap(request.Env),
+			DisableCNAMESupport:        request.DisableCNAMESupport,
+			DisableCompletePropagation: request.DisableCompletePropagation,
+			RecursiveNameservers:       append([]string(nil), request.RecursiveNameservers...),
+		},
+		Certificates: []CertificateSpec{
+			{
+				Name:            name,
+				Domains:         append([]string(nil), request.Domains...),
+				OutputDir:       outputDir,
+				OutputFiles:     request.OutputFiles,
+				KeyType:         keyType,
+				RenewBeforeDays: renewBeforeDays,
+				Challenge:       "dns-01",
+			},
+		},
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func IssueCertificate(request Request, out io.Writer) (CertificateResult, error) {
+	cfg, err := BuildConfig(request)
+	if err != nil {
+		return CertificateResult{}, err
+	}
+	cert := cfg.Certificates[0]
+	result, err := Issue(cfg, cert.Name, request.Force, out)
+	if err != nil {
+		return CertificateResult{}, err
+	}
+	return CertificateResult{Result: result, Name: cert.Name, Paths: cert.Paths()}, nil
+}
+
+func RenewCertificate(request Request, out io.Writer) (CertificateResult, error) {
+	cfg, err := BuildConfig(request)
+	if err != nil {
+		return CertificateResult{}, err
+	}
+	cert := cfg.Certificates[0]
+	result, err := Renew(cfg, cert.Name, request.Force, out)
+	if err != nil {
+		return CertificateResult{}, err
+	}
+	return CertificateResult{Result: result, Name: cert.Name, Paths: cert.Paths()}, nil
+}
+
+func certificateNameFromDomain(domain string) string {
+	name := strings.TrimSpace(strings.TrimPrefix(domain, "*."))
+	name = strings.NewReplacer("*", "_", ":", "_", "/", "_", "\\", "_", " ", "_").Replace(name)
+	if name == "" {
+		return "certificate"
+	}
+	return name
+}
+
+func copyStringMap(values map[string]string) map[string]string {
+	if values == nil {
+		return map[string]string{}
+	}
+	copyOf := make(map[string]string, len(values))
+	for key, value := range values {
+		copyOf[key] = value
+	}
+	return copyOf
 }
 
 func Plan(cfg *Config, name string, out io.Writer) error {

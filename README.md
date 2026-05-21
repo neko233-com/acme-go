@@ -103,6 +103,46 @@ Minimal nginx GUI integration example:
 
 nginx GUI 服务接入示例：
 
+If your service only wants to provide provider credentials and a list of domains, use the compact API:
+
+如果你的服务只想传云厂商、密钥和域名数组，可以用这个简化 API：
+
+```go
+package ssl
+
+import (
+  "io"
+
+  "github.com/neko233-com/acme-go/pkg/acmego"
+)
+
+func IssueSiteCertificate() (acmego.CertificatePaths, error) {
+  result, err := acmego.IssueCertificate(acmego.Request{
+    Email:     "ops@example.com",
+    Provider:  "alidns",
+    Domains:   []string{"example.com", "*.example.com"},
+    OutputDir: "/etc/myapp/ssl/example.com",
+    Credentials: acmego.DNSCredentials{
+      AccessKey: "aliyun-access-key-from-secret-store",
+      SecretKey: "aliyun-secret-key-from-secret-store",
+    },
+    Force: true,
+  }, io.Discard)
+  if err != nil {
+    return acmego.CertificatePaths{}, err
+  }
+  return result.Paths, nil
+}
+```
+
+`IssueCertificate` writes `cert.pem`, `privkey.pem`, `pubkey.pem`, `fullchain.pem`, `issuer.pem`, `metadata.json`, `README.en.md`, and `README.zh-CN.md` under `OutputDir`. For automatic HTTPS, point your server at `result.Paths.FullChainFile` and `result.Paths.KeyFile`.
+
+`IssueCertificate` 会在 `OutputDir` 下写出 `cert.pem`、`privkey.pem`、`pubkey.pem`、`fullchain.pem`、`issuer.pem`、`metadata.json`、`README.en.md` 和 `README.zh-CN.md`。要实现自动 HTTPS，服务端直接使用 `result.Paths.FullChainFile` 和 `result.Paths.KeyFile` 即可。
+
+Advanced integration can still build the full config manually:
+
+如果你需要更细控制，也可以继续手写完整配置：
+
 ```go
 package ssl
 

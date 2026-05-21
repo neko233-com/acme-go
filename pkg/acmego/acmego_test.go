@@ -61,3 +61,45 @@ func TestPublicAPIExposesConfigAndHelpers(t *testing.T) {
 		t.Fatal("expected missing certificate error")
 	}
 }
+
+func TestBuildConfigFromLibraryRequest(t *testing.T) {
+	dir := t.TempDir()
+	cfg, err := acmego.BuildConfig(acmego.Request{
+		Email:     "ops@example.com",
+		Provider:  "alidns",
+		Domains:   []string{"example.com", "*.example.com"},
+		OutputDir: dir,
+		Credentials: acmego.DNSCredentials{
+			AccessKey: "access-key",
+			SecretKey: "secret-key",
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildConfig: %v", err)
+	}
+	if cfg.Account.Email != "ops@example.com" {
+		t.Fatalf("email: got %q", cfg.Account.Email)
+	}
+	if !cfg.Account.AcceptTOS {
+		t.Fatal("embedded request should accept ACME terms for issuance")
+	}
+	if cfg.DNS.Provider != "alidns" {
+		t.Fatalf("provider: got %q", cfg.DNS.Provider)
+	}
+	if cfg.Certificates[0].Name != "example.com" {
+		t.Fatalf("name: got %q", cfg.Certificates[0].Name)
+	}
+	if cfg.Certificates[0].Paths().FullChainFile != filepath.Join(dir, "fullchain.pem") {
+		t.Fatalf("fullchain path: got %q", cfg.Certificates[0].Paths().FullChainFile)
+	}
+	if cfg.Certificates[0].Challenge != "dns-01" {
+		t.Fatalf("challenge: got %q", cfg.Certificates[0].Challenge)
+	}
+}
+
+func TestBuildConfigRequiresDomain(t *testing.T) {
+	_, err := acmego.BuildConfig(acmego.Request{Email: "ops@example.com", Provider: "cloudflare"})
+	if err == nil {
+		t.Fatal("expected missing domain error")
+	}
+}
