@@ -84,7 +84,7 @@
     },
     {
       "name": "neko233-staging",
-      "domains": ["_.neko2public.online"],
+      "domains": ["*.neko2public.online"],
       "dns": {
         "provider_ref": "aliyun-cn"
       },
