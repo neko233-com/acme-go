@@ -39,6 +39,13 @@ jobs:
           go-version: '1.26.0'
           cache: true
 
+      - name: Install packaging tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y zip
+
       - name: Build artifact
         env:
           GOOS: ${{ matrix.goos }}
@@ -58,21 +65,18 @@ jobs:
           version_value="${VERSION#v}"
           go build -trimpath -ldflags "-s -w -X main.version=${version_value}" -o "$outdir/$binary" .
           cp README.md "$outdir/README.md"
-          cp config_acme.json "$outdir/config_acme.json"
           cp how-to-use.html "$outdir/how-to-use.html"
-          if [ "$GOOS" = "windows" ]; then
-            (cd dist && zip -r "acme-go_${GOOS}_${GOARCH}.zip" "acme-go_${GOOS}_${GOARCH}")
-          else
-            tar -C dist -czf "dist/acme-go_${GOOS}_${GOARCH}.tar.gz" "acme-go_${GOOS}_${GOARCH}"
-          fi
+          cp config_acme.json "$outdir/config_acme.json"
+          cp config_acme.local.example.json "$outdir/config_acme.local.example.json"
+          cp install-systemd-service.sh "$outdir/install-systemd-service.sh"
+          cp install-windows-service.cmd "$outdir/install-windows-service.cmd"
+          (cd dist && zip -r "acme-go_${GOOS}_${GOARCH}.zip" "acme-go_${GOOS}_${GOARCH}")
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: acme-go_${{ matrix.goos }}_${{ matrix.goarch }}
-          path: |
-            dist/acme-go_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
-            dist/acme-go_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: dist/acme-go_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   publish:
     if: startsWith(github.ref, 'refs/tags/')
@@ -94,11 +98,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p release-docs
-          cp README.md release-docs/README.md
-          cp config_acme.json release-docs/config_acme.json
-          cp how-to-use.html release-docs/how-to-use.html
-          tar -C release-docs -czf docs_bundle.tar.gz .
           cd dist-artifacts
           sha256sum * > SHA256SUMS
 
@@ -108,4 +107,3 @@ jobs:
           generate_release_notes: true
           files: |
             dist-artifacts/*
-            docs_bundle.tar.gz
