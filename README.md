@@ -544,7 +544,12 @@ Go 库发布基于 tag。如果还没有语义化版本 tag，首个版本自动
 Windows:
 
 ```cmd
+git-deploy-tags.cmd
+git-deploy-tags.cmd --dry-run
+git-deploy-tags.cmd v0.0.6
+
 publish-lib.cmd
+publish-lib.cmd --dry-run
 publish-lib.cmd v0.0.1
 ```
 
@@ -556,9 +561,9 @@ chmod +x publish-lib.sh
 ./publish-lib.sh v0.0.1
 ```
 
-The scripts run the non-integration test suite, verify `pkg/acmego`, create an annotated tag, push the current branch, and then push the version tag to GitHub. Consumers can then use:
+The Windows scripts fetch remote tags, compute the next patch version from Git tags plus `version.txt`, run the non-integration test suite, verify `pkg/acmego`, write the released version back into `version.txt`, commit it, create an annotated tag, push the current branch, and then push the version tag to GitHub. Consumers can then use:
 
-脚本会运行非 integration 测试，验证 `pkg/acmego`，创建 annotated tag，先推送当前分支，再推送版本 tag 到 GitHub。其他项目随后可以使用：
+Windows 脚本会先拉取远端 tags，再结合 Git tags 和 `version.txt` 计算下一个 patch 版本，运行非 integration 测试，验证 `pkg/acmego`，把发布版本写回 `version.txt`，提交该文件，创建 annotated tag，先推送当前分支，再推送版本 tag 到 GitHub。其他项目随后可以使用：
 
 ```bash
 go get github.com/neko233-com/acme-go/pkg/acmego@v0.0.1
