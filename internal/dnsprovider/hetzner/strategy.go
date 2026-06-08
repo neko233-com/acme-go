@@ -1,7 +1,7 @@
 package hetzner
 
 import (
-	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme233/internal/config"
 
 	"github.com/go-acme/lego/v4/challenge"
 	hetznprovider "github.com/go-acme/lego/v4/providers/dns/hetzner"

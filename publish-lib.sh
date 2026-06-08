@@ -61,5 +61,5 @@ git push origin "$current_branch"
 echo "Pushing tag $version to origin..."
 git push origin "$version"
 
-echo "Published $version to GitHub. Consumers can use: go get github.com/neko233-com/acme-go/pkg/acmego@$version"
+echo "Published $version to GitHub. Consumers can use: go get github.com/neko233-com/acme233/pkg/acmego@$version"
 echo "已同步推送分支 $current_branch 和标签 $version。"

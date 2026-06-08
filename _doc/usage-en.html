@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>acme-go Usage Guide</title>
+  <title>acme233 Usage Guide</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.55; margin: 0; color: #172033; background: #f7f8fb; }
     main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 56px; }
@@ -18,8 +18,8 @@
 </head>
 <body>
 <main>
-  <h1>acme-go Usage Guide</h1>
-  <p>acme-go obtains and renews free SSL certificates through ACME. It is driven by <code>config_acme.json</code>, and private DNS credentials should be placed in <code>config_acme.local.json</code>.</p>
+  <h1>acme233 Usage Guide</h1>
+  <p>acme233 obtains and renews free SSL certificates through ACME. It is driven by <code>config_acme.json</code>, and private DNS credentials should be placed in <code>config_acme.local.json</code>.</p>
 
   <section>
     <h2>Quick Start</h2>
@@ -28,13 +28,13 @@
       <li>Create an API token or access key with permission to edit DNS TXT records.</li>
       <li>Put public certificate settings in <code>config_acme.json</code>.</li>
       <li>Put private credentials in <code>config_acme.local.json</code>.</li>
-      <li>Run <code>acme-go validate -config config_acme.json</code>.</li>
-      <li>Run <code>acme-go issue -config config_acme.json -name neko233-staging</code>.</li>
+      <li>Run <code>acme233 validate -config config_acme.json</code>.</li>
+      <li>Run <code>acme233 issue -config config_acme.json -name neko233-staging</code>.</li>
     </ol>
-    <pre><code>acme-go providers
-acme-go validate -config config_acme.json
-acme-go paths -config config_acme.json -name neko233-staging
-acme-go issue -config config_acme.json -name neko233-staging</code></pre>
+    <pre><code>acme233 providers
+acme233 validate -config config_acme.json
+acme233 paths -config config_acme.json -name neko233-staging
+acme233 issue -config config_acme.json -name neko233-staging</code></pre>
   </section>
 
   <section>
@@ -47,10 +47,10 @@ acme-go issue -config config_acme.json -name neko233-staging</code></pre>
   <section>
     <h2>Using the Certificate</h2>
     <h3>nginx</h3>
-    <pre><code>ssl_certificate     /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem;
-ssl_certificate_key /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem;</code></pre>
+    <pre><code>ssl_certificate     /path/to/acme233/output_SSL/_.neko2public.online/fullchain.pem;
+ssl_certificate_key /path/to/acme233/output_SSL/_.neko2public.online/privkey.pem;</code></pre>
     <h3>Caddy</h3>
-    <pre><code>tls /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem</code></pre>
+    <pre><code>tls /path/to/acme233/output_SSL/_.neko2public.online/fullchain.pem /path/to/acme233/output_SSL/_.neko2public.online/privkey.pem</code></pre>
     <h3>Windows or GUI tools</h3>
     <p>Use <code>fullchain.pem</code> as the certificate chain and <code>privkey.pem</code> as the private key. Keep <code>output_SSL/</code> backed up but do not commit it to Git.</p>
   </section>

@@ -1,6 +1,6 @@
 ---
 name: github-actions-self-verify
-description: 'Use when: modifying GitHub Actions workflows, VS Code tasks, release packaging, CI, actionlint, or automation scripts in acme-go. Runs repository self-verification before commit or push.'
+description: 'Use when: modifying GitHub Actions workflows, VS Code tasks, release packaging, CI, actionlint, or automation scripts in acme233. Runs repository self-verification before commit or push.'
 argument-hint: 'what changed, for example: release zip packaging or CI workflow'
 ---
 
@@ -40,7 +40,7 @@ Use this skill whenever an agent changes GitHub Actions, VS Code task wiring, re
    ```
 
 5. For release packaging changes, verify each zip bundle is expected to contain:
-   - `acme-go` or `acme-go.exe`
+   - `acme233` or `acme233.exe`
    - `README.md`
    - `how-to-use.html`
    - `_doc/`

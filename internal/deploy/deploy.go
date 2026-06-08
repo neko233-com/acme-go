@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/hook"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/hook"
 )
 
 type Context struct {

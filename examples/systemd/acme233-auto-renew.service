@@ -1,0 +1,14 @@
+[Unit]
+Description=acme233 automatic renewal service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/etc/acme233
+ExecStart=/usr/local/bin/acme233 auto-renew -config /etc/acme233/config_acme.json
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

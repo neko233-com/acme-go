@@ -1,10 +1,10 @@
 # acme233
 
-配置驱动的 ACME 自动化命令行工具，使用 Go 编写，支持签发、续期、吊销、安装证书、部署钩子、多 DNS 厂商接入以及 GitHub Release 自升级。
+`acme233` is a config-driven ACME automation CLI written in Go. It can issue, renew, revoke, install, deploy, and upgrade certificate workflows with multi-provider DNS support.
 
-[English](./README.en.md) | [HTML 使用说明](./how-to-use.html)
+[中文](./README.md) | [HTML guide](./how-to-use.html)
 
-## 快速安装
+## Install
 
 Linux / macOS:
 
@@ -18,19 +18,19 @@ Windows PowerShell:
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/neko233-com/acme233/main/install.ps1 | iex"
 ```
 
-安装后使用 `acme233`：
+After installation, use the `acme233` command:
 
 ```bash
 acme233 version
 acme233 providers
 ```
 
-默认安装位置：
+Default install locations:
 
 - Linux / macOS: `~/.local/bin/acme233`
 - Windows: `%LOCALAPPDATA%\acme233\bin\acme233.exe`
 
-安装器会自动把安装目录加入 PATH。指定版本或安装目录：
+The installers add the install directory to PATH. To install a specific version or directory:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/neko233-com/acme233/main/install.sh | sh -s -- --version v0.0.7
@@ -43,35 +43,35 @@ $env:ACME233_INSTALL_DIR = "$env:USERPROFILE\bin"
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/neko233-com/acme233/main/install.ps1 | iex"
 ```
 
-常用环境变量：
+Useful environment variables:
 
-- `ACME233_VERSION`: 指定发布版本，默认安装最新 release。
-- `ACME233_INSTALL_DIR`: 指定安装目录。
-- `ACME233_REPO`: 指定 GitHub 仓库，默认 `neko233-com/acme233`。
-- `GITHUB_BASE_URL`: GitHub 基础地址，默认 `https://github.com`。
-- `GITHUB_TOKEN`: 私有仓库或认证下载时使用。
-- `ACME233_AUTO_UPDATE=false`: 关闭命令运行时的自动更新检查。
+- `ACME233_VERSION`: release tag to install. Defaults to the latest release.
+- `ACME233_INSTALL_DIR`: installation directory.
+- `ACME233_REPO`: GitHub repository. Defaults to `neko233-com/acme233`.
+- `GITHUB_BASE_URL`: GitHub base URL. Defaults to `https://github.com`.
+- `GITHUB_TOKEN`: optional token for authenticated release downloads.
+- `ACME233_AUTO_UPDATE=false`: disables runtime auto-update checks.
 
-## 功能特性
+## Features
 
-- 支持 `dns-01`、`http-01`、`standalone`、`webroot`、`tls-alpn-01`。
-- 支持阿里云、腾讯云、火山引擎、Cloudflare、AWS、Google Cloud、Azure、DigitalOcean、Hetzner、华为云、IBM Cloud、Linode、Oracle Cloud、Scaleway、UCloud、百度云、Vultr 等 DNS provider。
-- 通过 `config_acme.json` 管理公开配置，通过 `config_acme.local.json` 管理本地密钥和覆盖项。
-- 支持 `dns.credentials` 低配置写法，自动映射 lego provider 所需环境变量。
-- 支持 `issue`、`renew`、`auto-renew`、`revoke`、`install-cert`、`deploy`、`version`、`upgrade` 等命令。
-- 支持 Linux、Windows、macOS 的 amd64 与 arm64 发布产物。
-- 支持作为 Go 包被其他服务接入：`github.com/neko233-com/acme233/pkg/acmego`。
+- Supports `dns-01`, `http-01`, `standalone`, `webroot`, and `tls-alpn-01`.
+- Supports common DNS providers including AliCloud, Tencent Cloud, Volcengine, Cloudflare, AWS, Google Cloud, Azure, DigitalOcean, Hetzner, Huawei Cloud, IBM Cloud, Linode, Oracle Cloud, Scaleway, UCloud, Baidu Cloud, and Vultr.
+- Keeps public config in `config_acme.json` and local secrets in `config_acme.local.json`.
+- Maps compact `dns.credentials` into provider-specific lego environment variables.
+- Provides `issue`, `renew`, `auto-renew`, `revoke`, `install-cert`, `deploy`, `version`, and `upgrade`.
+- Publishes Linux, Windows, and macOS binaries for amd64 and arm64.
+- Can be embedded as a Go package: `github.com/neko233-com/acme233/pkg/acmego`.
 
-## 快速开始
+## Quick Start
 
-1. 编辑 `config_acme.json`，填写账户、域名、challenge 和输出目录。
-2. 把 DNS 密钥写入 `config_acme.local.json`，不要提交到 Git。
-3. 运行 `acme233 validate -config config_acme.json` 检查配置。
-4. 运行 `acme233 providers` 查看支持的 DNS 厂商。
-5. 运行 `acme233 plan -config config_acme.json` 预览签发计划。
-6. 运行 `acme233 issue -config config_acme.json` 签发证书。
+1. Edit `config_acme.json` with account, domains, challenge settings, and output paths.
+2. Put DNS credentials in `config_acme.local.json`; do not commit it.
+3. Run `acme233 validate -config config_acme.json`.
+4. Run `acme233 providers` to list supported DNS providers.
+5. Run `acme233 plan -config config_acme.json`.
+6. Run `acme233 issue -config config_acme.json`.
 
-常用命令：
+Common commands:
 
 ```bash
 acme233 validate -config config_acme.json
@@ -85,11 +85,11 @@ acme233 deploy -config config_acme.json -name example-prod
 acme233 upgrade
 ```
 
-## 配置模型
+## Configuration
 
-推荐把可提交配置放在 `config_acme.json`，把私密凭据放在 `config_acme.local.json`。本地配置优先级更高，适合覆盖 DNS 密钥、测试目录和环境差异。
+Use `config_acme.json` for committed settings and `config_acme.local.json` for private credentials and local overrides.
 
-最小示例：
+Minimal example:
 
 ```json
 {
@@ -114,13 +114,13 @@ acme233 upgrade
 }
 ```
 
-更多字段可参考：
+More references:
 
 - [config.schema.json](./config.schema.json)
 - [config_acme.local.example.json](./config_acme.local.example.json)
-- [HTML 使用说明](./how-to-use.html)
+- [HTML guide](./how-to-use.html)
 
-## 常驻续期服务
+## Renewal Service
 
 Linux systemd:
 
@@ -129,27 +129,27 @@ chmod +x install-systemd-service.sh
 sudo ./install-systemd-service.sh acme233-auto-renew /etc/acme233/config_acme.json /usr/local/bin/acme233
 ```
 
-也可以参考示例 unit：
+Example unit:
 
 ```text
 examples/systemd/acme233-auto-renew.service
 ```
 
-Windows 可配合 `nssm` 安装为服务：
+Windows service through `nssm`:
 
 ```cmd
 install-windows-service.cmd acme233-auto-renew C:\acme233\config_acme.json C:\acme233\acme233.exe
 ```
 
-## Go 包接入
+## Go Package
 
-其他 Go 服务可以直接依赖：
+Other Go services can depend on:
 
 ```bash
 go get github.com/neko233-com/acme233/pkg/acmego
 ```
 
-示例：
+Example:
 
 ```go
 package ssl
@@ -178,9 +178,9 @@ func IssueSiteCertificate() (acmego.CertificatePaths, error) {
 }
 ```
 
-## GitHub 发布
+## GitHub Release
 
-仓库发布工作流会为以下平台构建安装器可下载的 zip 产物：
+The release workflow builds zip assets for:
 
 - `acme233_linux_amd64.zip`
 - `acme233_linux_arm64.zip`
@@ -189,20 +189,20 @@ func IssueSiteCertificate() (acmego.CertificatePaths, error) {
 - `acme233_darwin_amd64.zip`
 - `acme233_darwin_arm64.zip`
 
-发布流程：
+Release by pushing a tag:
 
 ```bash
 git tag -a v0.0.7 -m "release v0.0.7"
 git push origin v0.0.7
 ```
 
-GitHub Actions 会自动构建并创建 release。也可以使用 `gh release create` 手动上传本地构建产物。
+GitHub Actions will build assets and create the release. You can also use `gh release create` to upload local assets manually.
 
-## 开发验证
+## Development
 
 ```bash
 go test ./...
 go test -tags=integration -timeout 20m ./...
 ```
 
-集成测试需要本地存在 `config_acme.local.json`。普通测试不依赖真实 ACME 账号。
+Integration tests require `config_acme.local.json`; regular tests do not require a live ACME account.

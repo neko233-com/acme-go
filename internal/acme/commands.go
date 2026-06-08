@@ -8,8 +8,8 @@ import (
 	"time"
 
 	lego "github.com/go-acme/lego/v4/lego"
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/dnsprovider"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/dnsprovider"
 )
 
 type CertificateInfo struct {

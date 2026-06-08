@@ -15,7 +15,7 @@ func TestRunTriggersAutoUpdateForOperationalCommands(t *testing.T) {
 		autoUpdateCalls++
 		return nil
 	}
-	locateExecPath = func() (string, error) { return filepath.Join(t.TempDir(), "acme-go"), nil }
+	locateExecPath = func() (string, error) { return filepath.Join(t.TempDir(), "acme233"), nil }
 	t.Cleanup(func() {
 		autoUpdate = originalAutoUpdate
 		locateExecPath = originalLocateExecPath
@@ -52,7 +52,7 @@ func TestRunIgnoresAutoUpdateFailure(t *testing.T) {
 	autoUpdate = func(currentVersion, executablePath string, out io.Writer) error {
 		return errors.New("boom")
 	}
-	locateExecPath = func() (string, error) { return filepath.Join(t.TempDir(), "acme-go"), nil }
+	locateExecPath = func() (string, error) { return filepath.Join(t.TempDir(), "acme233"), nil }
 	t.Cleanup(func() {
 		autoUpdate = originalAutoUpdate
 		locateExecPath = originalLocateExecPath

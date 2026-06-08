@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"
-	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme233/internal/config"
 )
 
 func TestCertificateNeedsRenew(t *testing.T) {

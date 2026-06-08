@@ -99,4 +99,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$version" -m "publish library $version"
           git push origin "$version"
-          echo "Published $version. Consumers can run: go get github.com/neko233-com/acme-go/pkg/acmego@$version"
+          echo "Published $version. Consumers can run: go get github.com/neko233-com/acme233/pkg/acmego@$version"

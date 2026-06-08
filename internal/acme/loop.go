@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/hook"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/hook"
 )
 
 // AutoRenewOptions controls the periodic renewal loop.

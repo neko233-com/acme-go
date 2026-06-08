@@ -20,7 +20,7 @@ func TestResolveGuidePathPrefersWorkingDirectory(t *testing.T) {
 		t.Fatalf("write executable guide: %v", err)
 	}
 
-	path, err := ResolveGuidePath(workingDir, filepath.Join(executableDir, "acme-go"))
+	path, err := ResolveGuidePath(workingDir, filepath.Join(executableDir, "acme233"))
 	if err != nil {
 		t.Fatalf("ResolveGuidePath: %v", err)
 	}
@@ -36,7 +36,7 @@ func TestResolveGuidePathFallsBackToExecutableDirectory(t *testing.T) {
 		t.Fatalf("write executable guide: %v", err)
 	}
 
-	path, err := ResolveGuidePath("", filepath.Join(executableDir, "acme-go"))
+	path, err := ResolveGuidePath("", filepath.Join(executableDir, "acme233"))
 	if err != nil {
 		t.Fatalf("ResolveGuidePath: %v", err)
 	}

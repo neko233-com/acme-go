@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/neko233-com/acme-go/internal/testspec"
+	"github.com/neko233-com/acme233/internal/testspec"
 )
 
 type commandSpec struct {

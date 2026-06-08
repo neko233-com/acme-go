@@ -10,10 +10,10 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/neko233-com/acme-go/internal/acme"
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/doc"
-	"github.com/neko233-com/acme-go/internal/update"
+	"github.com/neko233-com/acme233/internal/acme"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/doc"
+	"github.com/neko233-com/acme233/internal/update"
 )
 
 var version = "dev"
@@ -376,63 +376,63 @@ func runDoc(args []string) error {
 }
 
 func printUsage() {
-	fmt.Print(`acme-go is a config-driven ACME client.
+	fmt.Print(`acme233 is a config-driven ACME client.
 
 Usage:
-	acme-go help [command]
-	acme-go doc [-print-path]
-	acme-go validate -config config_acme.json
-	acme-go plan   -config config_acme.json
-	acme-go paths  -config config_acme.json [-name example]
-	acme-go list   -config config_acme.json
-	acme-go info   -config config_acme.json -name example
-	acme-go issue  -config config_acme.json [-name example] [-force]
-	acme-go renew  -config config_acme.json [-name example] [-force]
-	acme-go renew-loop  -config config_acme.json [-name example] [-force] [-interval 24h] [-once]
-	acme-go auto-renew  -config config_acme.json [-name example] [-force] [-interval 24h] [-once]
-	acme-go revoke -config config_acme.json -name example
-	acme-go install-cert -config config_acme.json -name example
-	acme-go deploy -config config_acme.json -name example
-  acme-go providers
-  acme-go version
-	acme-go upgrade
+	acme233 help [command]
+	acme233 doc [-print-path]
+	acme233 validate -config config_acme.json
+	acme233 plan   -config config_acme.json
+	acme233 paths  -config config_acme.json [-name example]
+	acme233 list   -config config_acme.json
+	acme233 info   -config config_acme.json -name example
+	acme233 issue  -config config_acme.json [-name example] [-force]
+	acme233 renew  -config config_acme.json [-name example] [-force]
+	acme233 renew-loop  -config config_acme.json [-name example] [-force] [-interval 24h] [-once]
+	acme233 auto-renew  -config config_acme.json [-name example] [-force] [-interval 24h] [-once]
+	acme233 revoke -config config_acme.json -name example
+	acme233 install-cert -config config_acme.json -name example
+	acme233 deploy -config config_acme.json -name example
+  acme233 providers
+  acme233 version
+	acme233 upgrade
 `)
 }
 
 func commandHelp(name string) (string, error) {
 	switch name {
 	case "help", "-h", "--help":
-		return "acme-go help [command]\nShow overall usage or detailed help for a single command.\n", nil
+		return "acme233 help [command]\nShow overall usage or detailed help for a single command.\n", nil
 	case "doc":
-		return "acme-go doc [-print-path]\nOpen how-to-use.html in the default browser, or print its resolved path.\n", nil
+		return "acme233 doc [-print-path]\nOpen how-to-use.html in the default browser, or print its resolved path.\n", nil
 	case "validate":
-		return "acme-go validate -config config_acme.json\nLoad config, merge <name>.local.json, apply defaults, and print a JSON summary.\n", nil
+		return "acme233 validate -config config_acme.json\nLoad config, merge <name>.local.json, apply defaults, and print a JSON summary.\n", nil
 	case "plan":
-		return "acme-go plan -config config_acme.json [-name example]\nShow which certificates would issue or skip based on local state.\n", nil
+		return "acme233 plan -config config_acme.json [-name example]\nShow which certificates would issue or skip based on local state.\n", nil
 	case "paths":
-		return "acme-go paths -config config_acme.json [-name example]\nPrint resolved output paths for certificate files.\n", nil
+		return "acme233 paths -config config_acme.json [-name example]\nPrint resolved output paths for certificate files.\n", nil
 	case "list":
-		return "acme-go list -config config_acme.json\nList all configured certificates and their current status.\n", nil
+		return "acme233 list -config config_acme.json\nList all configured certificates and their current status.\n", nil
 	case "info":
-		return "acme-go info -config config_acme.json -name example\nShow detailed information for a single certificate entry.\n", nil
+		return "acme233 info -config config_acme.json -name example\nShow detailed information for a single certificate entry.\n", nil
 	case "issue":
-		return "acme-go issue -config config_acme.json [-name example] [-force]\nIssue a new certificate or replace an existing one.\n", nil
+		return "acme233 issue -config config_acme.json [-name example] [-force]\nIssue a new certificate or replace an existing one.\n", nil
 	case "renew":
-		return "acme-go renew -config config_acme.json [-name example] [-force]\nRenew certificates that are due, or force renewal.\n", nil
+		return "acme233 renew -config config_acme.json [-name example] [-force]\nRenew certificates that are due, or force renewal.\n", nil
 	case "renew-loop", "auto-renew", "watch":
-		return "acme-go renew-loop -config config_acme.json [-name example] [-force] [-interval 24h] [-once]\nAlias: auto-renew, watch. Run renew on a schedule. The interval defaults to automation.renew_interval, which falls back to 24h unless -interval overrides it. Use -once to run a single renew cycle and exit.\n", nil
+		return "acme233 renew-loop -config config_acme.json [-name example] [-force] [-interval 24h] [-once]\nAlias: auto-renew, watch. Run renew on a schedule. The interval defaults to automation.renew_interval, which falls back to 24h unless -interval overrides it. Use -once to run a single renew cycle and exit.\n", nil
 	case "revoke":
-		return "acme-go revoke -config config_acme.json -name example\nRevoke a locally stored certificate through the ACME server.\n", nil
+		return "acme233 revoke -config config_acme.json -name example\nRevoke a locally stored certificate through the ACME server.\n", nil
 	case "install-cert":
-		return "acme-go install-cert -config config_acme.json -name example\nCopy generated certificate files into configured install destinations.\n", nil
+		return "acme233 install-cert -config config_acme.json -name example\nCopy generated certificate files into configured install destinations.\n", nil
 	case "deploy":
-		return "acme-go deploy -config config_acme.json -name example\nRun configured deploy targets with existing local certificate material.\n", nil
+		return "acme233 deploy -config config_acme.json -name example\nRun configured deploy targets with existing local certificate material.\n", nil
 	case "providers":
-		return "acme-go providers\nPrint supported DNS providers and aliases as JSON.\n", nil
+		return "acme233 providers\nPrint supported DNS providers and aliases as JSON.\n", nil
 	case "version":
-		return "acme-go version\nPrint current version, latest GitHub release, and concise change summary.\n", nil
+		return "acme233 version\nPrint current version, latest GitHub release, and concise change summary.\n", nil
 	case "upgrade":
-		return "acme-go upgrade\nDownload the latest release artifact for the current OS and architecture and replace the local binary. Automatic update checks are enabled by default; set ACME_GO_AUTO_UPDATE=false to disable them.\n", nil
+		return "acme233 upgrade\nDownload the latest release artifact for the current OS and architecture and replace the local binary. Automatic update checks are enabled by default; set ACME233_AUTO_UPDATE=false to disable them.\n", nil
 	default:
 		return "", fmt.Errorf("unknown help topic %q", name)
 	}

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>acme-go 使用说明</title>
+  <title>acme233 使用说明</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; line-height: 1.65; margin: 0; color: #172033; background: #f7f8fb; }
     main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 56px; }
@@ -18,8 +18,8 @@
 </head>
 <body>
 <main>
-  <h1>acme-go 使用说明</h1>
-  <p>acme-go 通过 ACME 协议申请和续期免费 SSL 证书。主配置是 <code>config_acme.json</code>，DNS 密钥等私密信息放在 <code>config_acme.local.json</code>。</p>
+  <h1>acme233 使用说明</h1>
+  <p>acme233 通过 ACME 协议申请和续期免费 SSL 证书。主配置是 <code>config_acme.json</code>，DNS 密钥等私密信息放在 <code>config_acme.local.json</code>。</p>
 
   <section>
     <h2>快速开始</h2>
@@ -28,13 +28,13 @@
       <li>在云厂商后台创建可修改 DNS TXT 记录的 API token 或 access key。</li>
       <li>把证书域名、输出目录、DNS provider 写入 <code>config_acme.json</code>。</li>
       <li>把私密凭据写入 <code>config_acme.local.json</code>。</li>
-      <li>运行 <code>acme-go validate -config config_acme.json</code> 检查配置。</li>
-      <li>运行 <code>acme-go issue -config config_acme.json -name neko233-staging</code> 申请证书。</li>
+      <li>运行 <code>acme233 validate -config config_acme.json</code> 检查配置。</li>
+      <li>运行 <code>acme233 issue -config config_acme.json -name neko233-staging</code> 申请证书。</li>
     </ol>
-    <pre><code>acme-go providers
-acme-go validate -config config_acme.json
-acme-go paths -config config_acme.json -name neko233-staging
-acme-go issue -config config_acme.json -name neko233-staging</code></pre>
+    <pre><code>acme233 providers
+acme233 validate -config config_acme.json
+acme233 paths -config config_acme.json -name neko233-staging
+acme233 issue -config config_acme.json -name neko233-staging</code></pre>
   </section>
 
   <section>
@@ -47,17 +47,17 @@ acme-go issue -config config_acme.json -name neko233-staging</code></pre>
   <section>
     <h2>证书如何使用</h2>
     <h3>nginx</h3>
-    <pre><code>ssl_certificate     /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem;
-ssl_certificate_key /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem;</code></pre>
+    <pre><code>ssl_certificate     /path/to/acme233/output_SSL/_.neko2public.online/fullchain.pem;
+ssl_certificate_key /path/to/acme233/output_SSL/_.neko2public.online/privkey.pem;</code></pre>
     <h3>Caddy</h3>
-    <pre><code>tls /path/to/acme-go/output_SSL/_.neko2public.online/fullchain.pem /path/to/acme-go/output_SSL/_.neko2public.online/privkey.pem</code></pre>
+    <pre><code>tls /path/to/acme233/output_SSL/_.neko2public.online/fullchain.pem /path/to/acme233/output_SSL/_.neko2public.online/privkey.pem</code></pre>
     <h3>Windows 或图形化面板</h3>
     <p>一般选择 <code>fullchain.pem</code> 作为证书链，选择 <code>privkey.pem</code> 作为私钥。<code>output_SSL/</code> 适合备份，但不要提交到 Git。</p>
   </section>
 
   <section>
     <h2>各云厂商凭据字段</h2>
-    <p>可以优先填写 <code>dns.credentials</code>，acme-go 会自动映射成 lego DNS provider 需要的环境变量；如果你在 <code>dns.env</code> 里显式写了环境变量，则显式值优先。</p>
+    <p>可以优先填写 <code>dns.credentials</code>，acme233 会自动映射成 lego DNS provider 需要的环境变量；如果你在 <code>dns.env</code> 里显式写了环境变量，则显式值优先。</p>
     <table>
       <thead><tr><th>厂商</th><th>常用别名</th><th>配置字段</th><th>自动映射环境变量</th></tr></thead>
       <tbody>

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://neko233.com/schemas/acme-go/config.schema.json",
-  "title": "acme-go configuration",
+  "$id": "https://neko233.com/schemas/acme233/config.schema.json",
+  "title": "acme233 configuration",
   "type": "object",
   "additionalProperties": false,
   "required": ["account", "certificates"],

@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/neko233-com/acme-go/internal/acme"
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/doc"
-	"github.com/neko233-com/acme-go/internal/update"
+	"github.com/neko233-com/acme233/internal/acme"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/doc"
+	"github.com/neko233-com/acme233/internal/update"
 )
 
 type Config = config.Config

@@ -3,7 +3,7 @@ package acme
 import (
 	"testing"
 
-	"github.com/neko233-com/acme-go/internal/config"
+	"github.com/neko233-com/acme233/internal/config"
 )
 
 func TestInspectCertificateUsesEffectiveDNSProvider(t *testing.T) {

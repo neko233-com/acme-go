@@ -20,9 +20,9 @@ import (
 
 const (
 	owner          = "neko233-com"
-	repo           = "acme-go"
+	repo           = "acme233"
 	defaultBaseURL = "https://api.github.com"
-	autoUpdateEnv  = "ACME_GO_AUTO_UPDATE"
+	autoUpdateEnv  = "ACME233_AUTO_UPDATE"
 )
 
 const autoUpdateCooldown = 12 * time.Hour
@@ -225,7 +225,7 @@ func (c Client) upgradeToVersion(currentVersion string, executablePath string, i
 		return err
 	}
 
-	tempDir, err := os.MkdirTemp("", "acme-go-upgrade-")
+	tempDir, err := os.MkdirTemp("", "acme233-upgrade-")
 	if err != nil {
 		return fmt.Errorf("create upgrade temp dir: %w", err)
 	}
@@ -367,10 +367,7 @@ func selectAsset(release githubRelease, goos, goarch string) (githubReleaseAsset
 }
 
 func assetName(goos, goarch string) string {
-	if goos == "windows" {
-		return fmt.Sprintf("acme-go_%s_%s.zip", goos, goarch)
-	}
-	return fmt.Sprintf("acme-go_%s_%s.tar.gz", goos, goarch)
+	return fmt.Sprintf("acme233_%s_%s.zip", goos, goarch)
 }
 
 func extractBinary(archivePath, tempDir string) (string, error) {
@@ -506,9 +503,9 @@ func windowsUpgradeScript(targetPath, newBinaryPath, backupPath string) string {
 
 func expectedBinaryName(goos string) string {
 	if goos == "windows" {
-		return "acme-go.exe"
+		return "acme233.exe"
 	}
-	return "acme-go"
+	return "acme233"
 }
 
 func normalizeVersion(version string) string {
@@ -584,7 +581,7 @@ func resolveAutoUpdateCachePath(cachePath, executablePath string) (string, error
 	if strings.TrimSpace(executablePath) == "" {
 		return "", fmt.Errorf("empty executable path")
 	}
-	return filepath.Join(filepath.Dir(executablePath), ".acme-go-auto-update.json"), nil
+	return filepath.Join(filepath.Dir(executablePath), ".acme233-auto-update.json"), nil
 }
 
 func readAutoUpdateState(path string) (autoUpdateState, error) {

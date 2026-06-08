@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/deploy"
-	"github.com/neko233-com/acme-go/internal/hook"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/deploy"
+	"github.com/neko233-com/acme233/internal/hook"
 )
 
 func runPreHooks(cert config.CertificateSpec, mode Mode, ctx deploy.Context, out io.Writer) error {

@@ -1,4 +1,4 @@
-module github.com/neko233-com/acme-go
+module github.com/neko233-com/acme233
 
 go 1.26.0
 

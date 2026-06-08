@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/neko233-com/acme-go/pkg/acmego"
+	"github.com/neko233-com/acme233/pkg/acmego"
 )
 
 func TestPublicAPIExposesConfigAndHelpers(t *testing.T) {

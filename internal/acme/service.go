@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/dnsprovider"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/dnsprovider"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
@@ -439,7 +439,7 @@ Valid until: %s
 | %s | Public key extracted from the certificate. Useful for inspection, pinning, or tools that need only the public key. |
 | %s | Leaf certificate plus issuer chain. This is the usual certificate file for nginx, Caddy, Apache, and most panels. |
 | %s | Issuer/intermediate certificate chain. Use it when a server asks for the chain separately. |
-| %s | acme-go metadata: provider, challenge type, ACME certificate URL, issue time, and expiry time. |
+| %s | acme233 metadata: provider, challenge type, ACME certificate URL, issue time, and expiry time. |
 
 ## Common Usage
 
@@ -477,7 +477,7 @@ func certificateReadmeZH(cert config.CertificateSpec, paths config.CertificatePa
 | %s | 从证书里提取出来的公钥。常用于检查、固定公钥或只需要公钥的工具。 |
 | %s | 叶子证书加中间证书链。nginx、Caddy、Apache 和大多数面板通常都用这个作为证书文件。 |
 | %s | 签发者/中间证书链。有些服务端会要求单独填写证书链。 |
-| %s | acme-go 元数据，包含 DNS 厂商、验证方式、ACME 证书 URL、签发时间和过期时间。 |
+| %s | acme233 元数据，包含 DNS 厂商、验证方式、ACME 证书 URL、签发时间和过期时间。 |
 
 ## 常见用法
 

@@ -14,7 +14,7 @@ import (
 func TestCheckVersionSummarizesNewerReleases(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/repos/neko233-com/acme-go/releases":
+		case "/repos/neko233-com/acme233/releases":
 			if err := json.NewEncoder(w).Encode([]githubRelease{
 				{TagName: "v0.2.0", Name: "0.2.0", Body: "- add upgrade command\n- add version diff", HTMLURL: "https://example.com/v0.2.0"},
 				{TagName: "v0.1.1", Name: "0.1.1", Body: "- dns provider aliases", HTMLURL: "https://example.com/v0.1.1"},
@@ -61,22 +61,22 @@ func TestSelectAssetMatchesCurrentNaming(t *testing.T) {
 	release := githubRelease{
 		TagName: "v0.2.0",
 		Assets: []githubReleaseAsset{
-			{Name: "acme-go_linux_amd64.tar.gz"},
-			{Name: "acme-go_windows_amd64.zip"},
+			{Name: "acme233_linux_amd64.zip"},
+			{Name: "acme233_windows_amd64.zip"},
 		},
 	}
 	asset, err := selectAsset(release, "windows", "amd64")
 	if err != nil {
 		t.Fatalf("selectAsset: %v", err)
 	}
-	if asset.Name != "acme-go_windows_amd64.zip" {
+	if asset.Name != "acme233_windows_amd64.zip" {
 		t.Fatalf("asset: got %q", asset.Name)
 	}
 }
 
 func TestWindowsUpgradeScriptContainsPaths(t *testing.T) {
-	script := windowsUpgradeScript(`C:\apps\acme-go.exe`, `C:\temp\acme-go.exe`, `C:\apps\acme-go.exe.bak`)
-	for _, token := range []string{"TARGET=C:\\apps\\acme-go.exe", "SOURCE=C:\\temp\\acme-go.exe", "BACKUP=C:\\apps\\acme-go.exe.bak", ":waitloop"} {
+	script := windowsUpgradeScript(`C:\apps\acme233.exe`, `C:\temp\acme233.exe`, `C:\apps\acme233.exe.bak`)
+	for _, token := range []string{"TARGET=C:\\apps\\acme233.exe", "SOURCE=C:\\temp\\acme233.exe", "BACKUP=C:\\apps\\acme233.exe.bak", ":waitloop"} {
 		if !strings.Contains(script, token) {
 			t.Fatalf("script missing %q", token)
 		}
@@ -112,7 +112,7 @@ func TestMaybeAutoUpdateSkipsFreshCache(t *testing.T) {
 	var out bytes.Buffer
 	err := client.MaybeAutoUpdate(AutoUpdateOptions{
 		CurrentVersion: "0.1.0",
-		ExecutablePath: filepath.Join(t.TempDir(), "acme-go"),
+		ExecutablePath: filepath.Join(t.TempDir(), "acme233"),
 		CachePath:      cachePath,
 		Out:            &out,
 		Now:            func() time.Time { return now.Add(time.Hour) },

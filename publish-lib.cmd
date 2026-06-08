@@ -107,6 +107,6 @@ echo Pushing tag %VERSION% to origin...
 git push origin "%VERSION%"
 if errorlevel 1 exit /b 1
 
-echo Published %VERSION% to GitHub. Consumers can use: go get github.com/neko233-com/acme-go/pkg/acmego@%VERSION%
+echo Published %VERSION% to GitHub. Consumers can use: go get github.com/neko233-com/acme233/pkg/acmego@%VERSION%
 echo 已同步推送分支 %CURRENT_BRANCH% 和标签 %VERSION%。
 endlocal

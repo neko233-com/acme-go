@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
-SERVICE_NAME="${1:-acme-go-auto-renew}"
+SERVICE_NAME="${1:-acme233-auto-renew}"
 CONFIG_PATH="${2:-$(pwd)/config_acme.json}"
-BINARY_PATH="${3:-$(pwd)/acme-go}"
+BINARY_PATH="${3:-$(pwd)/acme233}"
 UNIT_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
 WORK_DIR="$(dirname "$CONFIG_PATH")"
 
@@ -27,7 +27,7 @@ trap 'rm -f "$tmp_file"' EXIT
 
 cat >"$tmp_file" <<EOF
 [Unit]
-Description=acme-go automatic renewal service
+Description=acme233 automatic renewal service
 After=network-online.target
 Wants=network-online.target
 

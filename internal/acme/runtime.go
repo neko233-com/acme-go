@@ -1,8 +1,8 @@
 package acme
 
 import (
-	"github.com/neko233-com/acme-go/internal/config"
-	"github.com/neko233-com/acme-go/internal/deploy"
+	"github.com/neko233-com/acme233/internal/config"
+	"github.com/neko233-com/acme233/internal/deploy"
 )
 
 // certificateRuntime is the resolved execution view for one certificate.
